@@ -72,9 +72,8 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-	// causes error "Expected official namespace for access widener entry, found: intermediary in mod: additionalentityattributes"
-//	api "io.github.apace100:apoli:${project.apoli_version}"
-//	include "io.github.apace100:apoli:${project.apoli_version}"
+	api "io.github.apace100:apoli:${project.apoli_version}"
+	include "io.github.apace100:apoli:${project.apoli_version}"
 
 	api("me.shedaniel.cloth:cloth-config-fabric:${project.clothconfig_version}") {
 		exclude(group: "net.fabricmc.fabric-api")
