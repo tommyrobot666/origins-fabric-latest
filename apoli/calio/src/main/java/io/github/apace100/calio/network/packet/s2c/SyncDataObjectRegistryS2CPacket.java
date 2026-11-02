@@ -5,9 +5,10 @@ import io.github.apace100.calio.registry.DataObjectRegistry;
 import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.packet.CustomPayload;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.util.Identifier;
 
-public record SyncDataObjectRegistryS2CPacket(DataObjectRegistry<?> registry) implements CustomPayload {
+public record SyncDataObjectRegistryS2CPacket(DataObjectRegistry<?> registry) implements CustomPacketPayload {
 
     public static final Id<SyncDataObjectRegistryS2CPacket> PACKET_ID = new Id<>(Calio.identifier("s2c/sync_data_object_registry"));
     public static final PacketCodec<RegistryByteBuf, SyncDataObjectRegistryS2CPacket> PACKET_CODEC = PacketCodec.of(SyncDataObjectRegistryS2CPacket::write, SyncDataObjectRegistryS2CPacket::read);
@@ -31,4 +32,8 @@ public record SyncDataObjectRegistryS2CPacket(DataObjectRegistry<?> registry) im
         return PACKET_ID;
     }
 
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return null;
+    }
 }

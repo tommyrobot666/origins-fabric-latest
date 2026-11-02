@@ -17,9 +17,10 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.codec.StreamCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryOps;
@@ -43,38 +44,38 @@ import java.util.stream.Stream;
 public class SerializableDataType<T> {
 
     private final Codec<T> codec;
-    private final PacketCodec<RegistryByteBuf, T> packetCodec;
+    private final StreamCodec<RegistryFriendlyByteBuf, T> packetCodec;
 
     private final boolean root;
 
-    public SerializableDataType(Codec<T> codec, PacketCodec<RegistryByteBuf, T> packetCodec, boolean root) {
+    public SerializableDataType(Codec<T> codec, StreamCodec<RegistryFriendlyByteBuf, T> packetCodec, boolean root) {
         this.codec = codec;
         this.packetCodec = packetCodec;
         this.root = root;
     }
 
-    public SerializableDataType(Codec<T> codec, PacketCodec<RegistryByteBuf, T> packetCodec) {
+    public SerializableDataType(Codec<T> codec, StreamCodec<RegistryFriendlyByteBuf, T> packetCodec) {
         this(codec, packetCodec, true);
     }
 
     public SerializableDataType(Codec<T> codec) {
-        this(codec, PacketCodecs.codec(codec).cast());
+        this(codec, StreamCodecs.codec(codec).cast());
     }
 
     /**
-     *  <p>Use {@link #of(Codec)}, {@link #of(Codec, PacketCodec)}, or {@link #jsonBacked(BiConsumer, Function, Function, Function)}
+     *  <p>Use {@link #of(Codec)}, {@link #of(Codec, StreamCodec)}, or {@link #jsonBacked(BiConsumer, Function, Function, Function)}
      *  (if you want to keep using the JSON codec for encoding/decoding the type) instead.</p>
      */
     @Deprecated
-    public SerializableDataType(Class<?> dataClass, BiConsumer<RegistryByteBuf, T> send, Function<RegistryByteBuf, T> receive, Function<JsonElement, T> fromJson, Function<T, JsonElement> toJson) {
-        this(new JsonCodec<>(fromJson, toJson), PacketCodec.of((value, buf) -> send.accept(buf, value), receive::apply));
+    public SerializableDataType(Class<?> dataClass, BiConsumer<RegistryFriendlyByteBuf, T> send, Function<RegistryFriendlyByteBuf, T> receive, Function<JsonElement, T> fromJson, Function<T, JsonElement> toJson) {
+        this(new JsonCodec<>(fromJson, toJson), StreamCodec.of((value, buf) -> send.accept(buf, value), receive::apply));
     }
 
     public Codec<T> codec() {
         return codec;
     }
 
-    public PacketCodec<RegistryByteBuf, T> packetCodec() {
+    public StreamCodec<RegistryFriendlyByteBuf, T> packetCodec() {
         return packetCodec;
     }
 
@@ -86,11 +87,11 @@ public class SerializableDataType<T> {
         return this.codec().encodeStart(ops, input);
     }
 
-    public T receive(RegistryByteBuf buf) {
+    public T receive(RegistryFriendlyByteBuf buf) {
         return this.packetCodec().decode(buf);
     }
 
-    public void send(RegistryByteBuf buf, T value) {
+    public void send(RegistryFriendlyByteBuf buf, T value) {
         this.packetCodec().encode(buf, value);
     }
 
@@ -206,12 +207,12 @@ public class SerializableDataType<T> {
         return new SerializableDataType<>(codec);
     }
 
-    public static <T> SerializableDataType<T> of(Codec<T> codec, PacketCodec<RegistryByteBuf, T> packetCodec) {
+    public static <T> SerializableDataType<T> of(Codec<T> codec, StreamCodec<RegistryFriendlyByteBuf, T> packetCodec) {
         return new SerializableDataType<>(codec, packetCodec);
     }
 
-    public static <T> SerializableDataType<T> jsonBacked(BiConsumer<RegistryByteBuf, T> send, Function<RegistryByteBuf, T> receive, Function<T, JsonElement> toJson, Function<JsonElement, T> fromJson) {
-        return new SerializableDataType<>(new JsonCodec<>(fromJson, toJson), PacketCodec.ofStatic(send::accept, receive::apply));
+    public static <T> SerializableDataType<T> jsonBacked(BiConsumer<RegistryFriendlyByteBuf, T> send, Function<RegistryFriendlyByteBuf, T> receive, Function<T, JsonElement> toJson, Function<JsonElement, T> fromJson) {
+        return new SerializableDataType<>(new JsonCodec<>(fromJson, toJson), StreamCodec.ofStatic(send::accept, receive::apply));
     }
 
     public static <T> RecursiveSerializableDataType<T> recursive(Function<SerializableDataType<T>, SerializableDataType<T>> wrapped) {
@@ -351,7 +352,7 @@ public class SerializableDataType<T> {
                 }
 
             },
-            PacketCodecs.registryValue(registry.getKey())
+            StreamCodecs.registryValue(registry.getKey())
         );
     }
 
@@ -362,7 +363,7 @@ public class SerializableDataType<T> {
      *  <ul>
      *      <li>{@link #compound(DataObjectFactory) compound(DataObjectFactory&lt;T&gt;)} for processing with a {@link DataObjectFactory}.</li>
      *      <li>{@link #compound(SerializableData, Function, BiFunction) compound(SerializableData, Function&lt;SerializableData.Instance, T&gt, BiFunction&lt;T, SerializableData, SerializableData.Instance&gt;)} for simple processing.</li>
-     *      <li>{@link CompoundSerializableDataType#CompoundSerializableDataType(SerializableData, Function, Function) CompoundSerializableDataType(SerializableData, Function&lt;SerializableData, MapCodec&lt;T&gt;&gt;, Function&lt;SerializableData, PacketCodec&lt;RegistryByteBuf, T&gt;&gt;)} for more granular control on how the element will be decoded/encoded.</li>
+     *      <li>{@link CompoundSerializableDataType#CompoundSerializableDataType(SerializableData, Function, Function) CompoundSerializableDataType(SerializableData, Function&lt;SerializableData, MapCodec&lt;T&gt;&gt;, Function&lt;SerializableData, StreamCodec&lt;RegistryFriendlyByteBuf, T&gt;&gt;)} for more granular control on how the element will be decoded/encoded.</li>
      *  </ul>
      *
      */
@@ -430,16 +431,16 @@ public class SerializableDataType<T> {
                 }
 
             },
-            _serializableData -> new PacketCodec<>() {
+            _serializableData -> new StreamCodec<>() {
 
                 @Override
-                public T decode(RegistryByteBuf buf) {
+                public T decode(RegistryFriendlyByteBuf buf) {
                     SerializableData.Instance data = _serializableData.receive(buf);
                     return fromData.apply(data);
                 }
 
                 @Override
-                public void encode(RegistryByteBuf buf, T value) {
+                public void encode(RegistryFriendlyByteBuf buf, T value) {
                     SerializableData.Instance data = toData.apply(value, _serializableData);
                     _serializableData.send(buf, data);
                 }
@@ -455,7 +456,7 @@ public class SerializableDataType<T> {
     public static <K, V> SerializableDataType<Map<K, V>> map(SerializableDataType<K> keyDataType, SerializableDataType<V> valueDataType) {
         return new SerializableDataType<>(
             new UnboundedMapCodec<>(keyDataType.codec(), valueDataType.codec()),
-            PacketCodec.ofStatic(
+            StreamCodec.ofStatic(
                 (buf, map) -> {
 
                     buf.writeVarInt(map.size());
@@ -538,7 +539,7 @@ public class SerializableDataType<T> {
                 }
 
             },
-            PacketCodec.ofStatic(
+            StreamCodec.ofStatic(
                 (buf, value) -> {
 
                     BiMap<String, V> acceptedValues = acceptedValuesSupplier.get();
@@ -624,7 +625,7 @@ public class SerializableDataType<T> {
                 }
 
             },
-            PacketCodec.ofStatic(
+            StreamCodec.ofStatic(
                 (buf, value) -> buf.writeIdentifier(value.id()),
                 buf -> TagKey.of(registryRef, buf.readIdentifier())
             )
@@ -660,7 +661,7 @@ public class SerializableDataType<T> {
 				}
 
 			},
-            PacketCodecs.registryEntry(registry.getKey())
+            StreamCodecs.registryEntry(registry.getKey())
         );
     }
 
@@ -703,7 +704,7 @@ public class SerializableDataType<T> {
                 }
 
             },
-            PacketCodec.ofStatic(
+            StreamCodec.ofStatic(
                 PacketByteBuf::writeRegistryKey,
                 buf -> buf.readRegistryKey(registryRef)
             )
@@ -782,7 +783,7 @@ public class SerializableDataType<T> {
                 }
 
             },
-            PacketCodecs.indexed(ordinalToEnum, Enum::ordinal).cast()
+            StreamCodecs.indexed(ordinalToEnum, Enum::ordinal).cast()
         );
     }
 
@@ -803,7 +804,7 @@ public class SerializableDataType<T> {
 
     /**
      *  Use either {@link #boundNumber(SerializableDataType, Number, BiFunction, Number, BiFunction)} or the built-in methods for ranged numbers, like {@link Codec#intRange(int, int)} and pass it to {@link #of(Codec)}
-     *  (or {@link #of(Codec, PacketCodec)} if you want to pass its packet codec as well.)
+     *  (or {@link #of(Codec, StreamCodec)} if you want to pass its packet codec as well.)
      */
     @Deprecated
     public static <N extends Number & Comparable<N>> SerializableDataType<N> boundNumber(SerializableDataType<N> numberDataType, N min, N max, Function<N, BiFunction<N, N, N>> read) {
@@ -896,7 +897,7 @@ public class SerializableDataType<T> {
                 }
 
             },
-            PacketCodec.of(
+            StreamCodec.of(
                 TagLike::write,
                 TagLike::read
             )
@@ -926,7 +927,7 @@ public class SerializableDataType<T> {
                 }
 
             },
-            PacketCodec.of(
+            StreamCodec.of(
                 TagLike::write,
                 TagLike::read
             )

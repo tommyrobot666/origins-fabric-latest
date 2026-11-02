@@ -11,6 +11,7 @@ import io.github.apace100.calio.util.Validatable;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.network.RegistryByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.registry.RegistryOps;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.NotNull;
@@ -183,14 +184,14 @@ public class SerializableData extends MapCodec<SerializableData.Instance> {
     }
 
     /**
-     *  Use {@link #receive(RegistryByteBuf)} instead.
+     *  Use {@link #receive(RegistryFriendlyByteBuf)} instead.
      */
     @Deprecated
     public Instance read(RegistryByteBuf buf) {
         return receive(buf);
     }
 
-    public Instance receive(RegistryByteBuf buf) {
+    public Instance receive(RegistryFriendlyByteBuf buf) {
 
         Instance data = instance();
         fields.forEach((name, field) -> {
@@ -221,7 +222,7 @@ public class SerializableData extends MapCodec<SerializableData.Instance> {
     }
 
     /**
-     *  Use {@link #send(RegistryByteBuf, Instance)} instead.
+     *  Use {@link #send(RegistryFriendlyByteBuf, Instance)} instead.
      */
     @Deprecated
     public void write(RegistryByteBuf buf, Instance data) {
@@ -229,7 +230,7 @@ public class SerializableData extends MapCodec<SerializableData.Instance> {
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    public void send(RegistryByteBuf buf, Instance data) {
+    public void send(RegistryFriendlyByteBuf buf, Instance data) {
 
         fields.forEach((name, field) -> {
 

@@ -56,6 +56,7 @@ import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.tag.EntityTypeTags;
 import net.minecraft.registry.tag.TagEntry;
 import net.minecraft.registry.tag.TagKey;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.stat.Stat;
 import net.minecraft.stat.StatType;
@@ -212,7 +213,7 @@ public final class SerializableDataTypes {
 
     public static final SerializableDataType<Identifier> IDENTIFIER = SerializableDataType.of(
         Codec.STRING.comapFlatMap(DynamicIdentifier::ofResult, Identifier::toString),
-        Identifier.PACKET_CODEC.cast()
+        Identifier.STREAM_CODEC.cast()
     );
 
     public static final SerializableDataType<List<Identifier>> IDENTIFIERS = IDENTIFIER.list();

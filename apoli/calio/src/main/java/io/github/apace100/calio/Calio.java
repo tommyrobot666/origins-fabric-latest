@@ -7,10 +7,10 @@ import io.github.apace100.calio.util.CalioResourceConditions;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.minecraft.advancement.criterion.Criteria;
-import net.minecraft.registry.*;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.Registry;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.TagKey;
 import net.minecraft.util.Unit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,23 +33,23 @@ public class Calio implements ModInitializer {
 	@Override
 	public void onInitialize() {
 
-        Criteria.register(CodeTriggerCriterion.ID.toString(), CodeTriggerCriterion.INSTANCE);
+//        Criteria.register(CodeTriggerCriterion.ID.toString(), CodeTriggerCriterion.INSTANCE);
 		CalioResourceConditions.register();
 
-		PayloadTypeRegistry.playS2C().register(SyncDataObjectRegistryS2CPacket.PACKET_ID, SyncDataObjectRegistryS2CPacket.PACKET_CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(SyncDataObjectRegistryS2CPacket.PACKET_ID, SyncDataObjectRegistryS2CPacket.PACKET_CODEC);
 		ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.register((player, joined) -> DataObjectRegistry.performAutoSync(player));
 
 	}
 
 	public static Identifier identifier(String path) {
-		return Identifier.of(MOD_NAMESPACE, path);
+		return Identifier.fromNamespaceAndPath(MOD_NAMESPACE, path);
 	}
 
 	/**
 	 * 	<b>Use {@link TagKey#equals(Object)} (or {@link Objects#equals(Object, Object)} if nullability is of concern) instead.</b>
 	 */
 	@Deprecated(forRemoval = true)
-	public static <T> boolean areTagsEqual(RegistryKey<? extends Registry<T>> registryKey, TagKey<T> tag1, TagKey<T> tag2) {
+	public static <T> boolean areTagsEqual(ResourceKey<? extends Registry<T>> registryKey, TagKey<T> tag1, TagKey<T> tag2) {
 		return areTagsEqual(tag1, tag2);
 	}
 
@@ -62,7 +62,7 @@ public class Calio implements ModInitializer {
 			|| tag1 != null
 			&& tag2 != null
 			&& tag1.registry().equals(tag2.registry())
-			&& tag1.id().equals(tag2.id());
+			&& tag1.location().equals(tag2.location());
 	}
 
 	public static <R> DataResult<R> createMissingRequiredFieldError(String name) {

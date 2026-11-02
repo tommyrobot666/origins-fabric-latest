@@ -8,20 +8,17 @@ import io.github.apace100.calio.data.*;
 import io.github.apace100.calio.network.packet.s2c.SyncDataObjectRegistryS2CPacket;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.ResourceType;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.InvalidIdentifierException;
-import net.minecraft.util.JsonHelper;
-import net.minecraft.util.profiler.Profiler;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
 import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.function.*;
 
 //  TODO: Generalize this to use codecs/packet codecs -eggohito
@@ -102,7 +99,7 @@ public class DataObjectRegistry<T extends DataObject<T>> {
         register(id, entry);
     }
 
-    public void send(RegistryByteBuf buf) {
+    public void send(RegistryFriendlyByteBuf buf) {
 
         int totalCount = Math.abs(idToEntry.size() - staticEntries.size());
         buf.writeInt(totalCount);
@@ -120,7 +117,7 @@ public class DataObjectRegistry<T extends DataObject<T>> {
 
     }
 
-    public void sendDataObject(RegistryByteBuf buf, T t) {
+    public void sendDataObject(RegistryFriendlyByteBuf buf, T t) {
 
         DataObjectFactory<T> factory = t.getFactory();
         buf.writeIdentifier(factoryToId.get(factory));
@@ -130,7 +127,7 @@ public class DataObjectRegistry<T extends DataObject<T>> {
 
     }
 
-    public DataObjectRegistry<T> receive(RegistryByteBuf buf) {
+    public DataObjectRegistry<T> receive(RegistryFriendlyByteBuf buf) {
 
         clear();
         int entryCount = buf.readVarInt();
@@ -148,7 +145,7 @@ public class DataObjectRegistry<T extends DataObject<T>> {
 
     }
 
-    public T receiveDataObject(RegistryByteBuf buf) {
+    public T receiveDataObject(RegistryFriendlyByteBuf buf) {
 
         Identifier factoryId = buf.readIdentifier();
         DataObjectFactory<T> factory = getFactory(factoryId);
@@ -179,15 +176,17 @@ public class DataObjectRegistry<T extends DataObject<T>> {
         }
         DataObjectFactory<T> factory;
         if(jsonObject.has(factoryFieldName)) {
-            String type = JsonHelper.getString(jsonObject, factoryFieldName);
+            String type = jsonObject.get(factoryFieldName).getAsString();
+//            String type = JsonHelper.getString(jsonObject, factoryFieldName);
             Identifier factoryId = null;
-            try {
-                factoryId = Identifier.of(type);
-            } catch (InvalidIdentifierException e) {
+
+            factoryId = Identifier.tryParse(type);
+            if (factoryId == null) {
                 throw new JsonParseException(
                     "Could not read data object of type \"" + registryId +
-                        "\": invalid factory identifier (id: \"" + factoryId + "\").", e);
+                        "\": invalid factory identifier (id: \"" + factoryId + "\").");
             }
+
             if(!factoriesById.containsKey(factoryId)) {
                 throw new JsonParseException(
                     "Could not read data object of type \"" + registryId +
@@ -203,9 +202,9 @@ public class DataObjectRegistry<T extends DataObject<T>> {
 
     }
 
-    public void sync(ServerPlayerEntity player) {
+    public void sync(ServerPlayer player) {
 
-        if (player.server.isDedicated()) {
+        if (player.server.isDedicatedServer()) {
             ServerPlayNetworking.send(player, new SyncDataObjectRegistryS2CPacket(this));
         }
 
@@ -298,7 +297,7 @@ public class DataObjectRegistry<T extends DataObject<T>> {
         REGISTRIES.put(registry.getRegistryId(), registry);
     }
 
-    public static void performAutoSync(ServerPlayerEntity player) {
+    public static void performAutoSync(ServerPlayer player) {
 
         for (Identifier registryId : AUTO_SYNC_SET) {
             DataObjectRegistry<?> registry = getRegistry(registryId);
@@ -329,6 +328,11 @@ public class DataObjectRegistry<T extends DataObject<T>> {
         }
 
         @Override
+        public CompletableFuture<Void> reload(SharedState currentReload, Executor taskExecutor, PreparationBarrier preparationBarrier, Executor reloadExecutor) {
+            return null;
+        }
+
+        @Override
         protected void apply(MultiJsonDataContainer prepared, ResourceManager manager, Profiler profiler) {
 
             clear();
@@ -348,7 +352,7 @@ public class DataObjectRegistry<T extends DataObject<T>> {
                     T object = readDataObject(jsonObject);
                     if (useLoadingPriority) {
 
-                        int loadingPriority = JsonHelper.getInt(jsonObject, "loading_priority", 0);
+                        int loadingPriority = jsonObject.get("loading_priority").getAsInt(); //JsonHelper.getInt(jsonObject, "loading_priority", 0);
                         if (!containsId(id) || LOADING_PRIORITIES.getOrDefault(id, 0) < loadingPriority) {
                             LOADING_PRIORITIES.put(id, loadingPriority);
                             register(id, object);

@@ -3,8 +3,7 @@ package io.github.apace100.calio.util;
 import com.google.gson.JsonElement;
 import com.mojang.serialization.DataResult;
 import io.github.apace100.calio.data.SerializableData;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.InvalidIdentifierException;
+import net.minecraft.resources.Identifier;
 
 public class DynamicIdentifier extends Identifier {
 
