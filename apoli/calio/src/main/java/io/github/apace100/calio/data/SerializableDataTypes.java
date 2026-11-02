@@ -12,7 +12,6 @@ import io.github.apace100.calio.mixin.TagEntryAccessor;
 import io.github.apace100.calio.registry.DataObjectFactories;
 import io.github.apace100.calio.util.ArgumentWrapper;
 import io.github.apace100.calio.util.DynamicIdentifier;
-import io.github.apace100.calio.util.StatusEffectChance;
 import io.github.apace100.calio.util.TagLike;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.fabricmc.fabric.api.recipe.v1.ingredient.CustomIngredient;
