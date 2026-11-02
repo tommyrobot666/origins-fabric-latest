@@ -4,11 +4,11 @@ import io.github.apace100.calio.data.DataException;
 import io.github.apace100.calio.mixin.TagEntryAccessor;
 import io.github.apace100.calio.util.DynamicIdentifier;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.registry.tag.TagEntry;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.dynamic.Codecs;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagEntry;
+import net.minecraft.util.ExtraCodecs;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -18,7 +18,7 @@ import java.util.function.Supplier;
 
 public class CalioPacketCodecs {
 
-    public static final PacketCodec<ByteBuf, Codecs.TagEntryId> TAG_ENTRY_ID = PacketCodecs.STRING.xmap(
+    public static final StreamCodec<ByteBuf, ExtraCodecs.TagOrElementLocation> TAG_ENTRY_ID = ByteBufCodecs.STRING_UTF8.map(
         str -> {
 
             boolean isTag = str.startsWith("#");
@@ -27,29 +27,29 @@ public class CalioPacketCodecs {
                 : str;
 
             Identifier id = DynamicIdentifier.of(idStr);
-            return new Codecs.TagEntryId(id, isTag);
+            return new ExtraCodecs.TagOrElementLocation(id, isTag);
 
         },
-        Codecs.TagEntryId::toString
+        ExtraCodecs.TagOrElementLocation::toString
     );
 
-    public static final PacketCodec<ByteBuf, TagEntry> TAG_ENTRY = PacketCodec.tuple(
+    public static final StreamCodec<ByteBuf, TagEntry> TAG_ENTRY = StreamCodec.composite(
         TAG_ENTRY_ID, tagEntry -> ((TagEntryAccessor) tagEntry).callGetIdForCodec(),
-        PacketCodecs.BOOL, tagEntry -> ((TagEntryAccessor) tagEntry).isRequired(),
+        ByteBufCodecs.BOOL, tagEntry -> ((TagEntryAccessor) tagEntry).isRequired(),
         TagEntry::new
     );
 
-    public static final PacketCodec<ByteBuf, Set<TagEntry>> TAG_ENTRY_SET = collection(HashSet::new, () -> CalioPacketCodecs.TAG_ENTRY);
+    public static final StreamCodec<ByteBuf, Set<TagEntry>> TAG_ENTRY_SET = collection(HashSet::new, () -> CalioPacketCodecs.TAG_ENTRY);
 
-    public static <B extends ByteBuf, E, C extends Collection<E>> PacketCodec<B, C> collection(IntFunction<C> collectionFactory, Supplier<PacketCodec<? super B, E>> elementCodec) {
+    public static <B extends ByteBuf, E, C extends Collection<E>> StreamCodec<B, C> collection(IntFunction<C> collectionFactory, Supplier<StreamCodec<? super B, E>> elementCodec) {
         return collection(collectionFactory, elementCodec, Integer.MAX_VALUE);
     }
 
-    public static <B extends ByteBuf, E, C extends Collection<E>> PacketCodec<B, C> collection(IntFunction<C> collectionFactory, Supplier<PacketCodec<? super B, E>> elementCodec, int maxSize) {
-        return PacketCodec.ofStatic(
+    public static <B extends ByteBuf, E, C extends Collection<E>> StreamCodec<B, C> collection(IntFunction<C> collectionFactory, Supplier<StreamCodec<? super B, E>> elementCodec, int maxSize) {
+        return StreamCodec.of(
             (buf, elements) -> {
 
-                PacketCodecs.writeCollectionSize(buf, elements.size(), maxSize);
+                ByteBufCodecs.writeCount(buf, elements.size(), maxSize);
                 int index = 0;
 
                 for (E element : elements) {
@@ -72,7 +72,7 @@ public class CalioPacketCodecs {
             },
             buf -> {
 
-                int size = PacketCodecs.readCollectionSize(buf, maxSize);
+                int size = ByteBufCodecs.readCount(buf, maxSize);
                 C elements = collectionFactory.apply(Math.min(size, 65536));
 
                 for (int index = 0; index < size; index++) {

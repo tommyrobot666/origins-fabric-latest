@@ -1,7 +1,7 @@
 package io.github.apace100.calio.data;
 
 import com.google.gson.JsonElement;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 import java.util.LinkedHashMap;
 import java.util.Set;

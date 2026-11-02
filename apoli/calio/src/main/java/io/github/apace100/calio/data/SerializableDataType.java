@@ -16,20 +16,11 @@ import io.github.apace100.calio.util.*;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
-import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.codec.StreamCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryOps;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.tag.TagEntry;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.collection.WeightedList;
-import net.minecraft.util.function.ValueLists;
+import net.minecraft.util.ExtraCodecs;
+import net.minecraft.util.random.Weighted;
+import net.minecraft.util.random.WeightedList;
 import org.apache.commons.lang3.EnumUtils;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -132,19 +123,19 @@ public class SerializableDataType<T> {
     }
 
     public <S> SerializableDataType<S> xmap(Function<? super T, ? extends S> to, Function<? super S, ? extends T> from) {
-        return new SerializableDataType<>(codec().xmap(to, from), packetCodec().xmap(to, from), this.isRoot());
+        return new SerializableDataType<>(codec().xmap(to, from), packetCodec().map(to, from), this.isRoot());
     }
 
     public <S> SerializableDataType<S> comapFlatMap(Function<? super T, ? extends DataResult<? extends S>> to, Function<? super S, ? extends T> from) {
-        return new SerializableDataType<>(codec().comapFlatMap(to, from), packetCodec().xmap(t -> to.apply(t).getOrThrow(), from), this.isRoot());
+        return new SerializableDataType<>(codec().comapFlatMap(to, from), packetCodec().map(t -> to.apply(t).getOrThrow(), from), this.isRoot());
     }
 
     public <S> SerializableDataType<S> flatComapMap(Function<? super T, ? extends S> to, Function<? super S, ? extends DataResult<? extends T>> from) {
-        return new SerializableDataType<>(codec().flatComapMap(to, from), packetCodec().xmap(to, s -> from.apply(s).getOrThrow()), this.isRoot());
+        return new SerializableDataType<>(codec().flatComapMap(to, from), packetCodec().map(to, s -> from.apply(s).getOrThrow()), this.isRoot());
     }
 
     public <S> SerializableDataType<S> flatXmap(Function<? super T, ? extends DataResult<? extends S>> to, Function<? super S, ? extends DataResult<? extends T>> from) {
-        return new SerializableDataType<>(codec().flatXmap(to, from), packetCodec().xmap(t -> to.apply(t).getOrThrow(), s -> from.apply(s).getOrThrow()), this.isRoot());
+        return new SerializableDataType<>(codec().flatXmap(to, from), packetCodec().map(t -> to.apply(t).getOrThrow(), s -> from.apply(s).getOrThrow()), this.isRoot());
     }
 
     public SerializableDataType<T> validate(Function<T, DataResult<T>> checker) {
@@ -212,7 +203,7 @@ public class SerializableDataType<T> {
     }
 
     public static <T> SerializableDataType<T> jsonBacked(BiConsumer<RegistryFriendlyByteBuf, T> send, Function<RegistryFriendlyByteBuf, T> receive, Function<T, JsonElement> toJson, Function<JsonElement, T> fromJson) {
-        return new SerializableDataType<>(new JsonCodec<>(fromJson, toJson), StreamCodec.ofStatic(send::accept, receive::apply));
+        return new SerializableDataType<>(new JsonCodec<>(fromJson, toJson), StreamCodec.of(send::accept, receive::apply));
     }
 
     public static <T> RecursiveSerializableDataType<T> recursive(Function<SerializableDataType<T>, SerializableDataType<T>> wrapped) {
@@ -237,7 +228,7 @@ public class SerializableDataType<T> {
 
     public static <T> SerializableDataType<WeightedList<T>> weightedList(SerializableDataType<T> singleDataType) {
 
-        CompoundSerializableDataType<WeightedList.Entry<T>> entryDataType = compound(
+        CompoundSerializableDataType<Weighted<T>> entryDataType = compound(
             new SerializableData()
                 .add("element", singleDataType)
                 .add("weight", SerializableDataTypes.INT, 1),
@@ -250,7 +241,7 @@ public class SerializableDataType<T> {
                 .set("weight", entry.getWeight())
         );
 
-        return entryDataType.list().xmap(
+        return entryDataType.list().map(
             WeightedList::new,
             weightedList -> new ObjectArrayList<>(((WeightedListAccessor<T>) weightedList).getEntries())
         );

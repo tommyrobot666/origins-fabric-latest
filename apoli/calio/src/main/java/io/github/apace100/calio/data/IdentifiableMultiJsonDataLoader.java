@@ -6,10 +6,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import io.github.apace100.calio.CalioServer;
 import net.fabricmc.fabric.impl.resource.conditions.ResourceConditionsImpl;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.ResourceType;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.profiler.Profiler;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryOps;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 import org.apache.commons.io.FilenameUtils;
 import org.jetbrains.annotations.Nullable;
 import org.quiltmc.parsers.json.JsonFormat;
@@ -32,24 +34,24 @@ public abstract class IdentifiableMultiJsonDataLoader extends ExtendedSinglePrep
     private final Gson gson;
 
     @Nullable
-    protected final ResourceType resourceType;
+    protected final PackType resourceType;
     protected final String directoryName;
 
     public IdentifiableMultiJsonDataLoader(Gson gson, String directoryName) {
         this(gson, directoryName, null);
     }
 
-    public IdentifiableMultiJsonDataLoader(Gson gson, String directoryName, @Nullable ResourceType resourceType) {
+    public IdentifiableMultiJsonDataLoader(Gson gson, String directoryName, @Nullable PackType resourceType) {
         this.gson = gson;
         this.directoryName = directoryName;
         this.resourceType = resourceType;
     }
 
     @Override
-    protected MultiJsonDataContainer prepare(ResourceManager manager, Profiler profiler) {
+    protected MultiJsonDataContainer prepare(final ResourceManager manager, final ProfilerFiller profiler) {
 
         MultiJsonDataContainer prepared = new MultiJsonDataContainer();
-        manager.findAllResources(directoryName, this::hasValidFormat).forEach((fileId, resources) -> {
+        manager.listResourceStacks(directoryName, this::hasValidFormat).forEach((fileId, resources) -> {
 
             Identifier resourceId = this.trim(fileId, directoryName);
             String fileExtension = "." + FilenameUtils.getExtension(fileId.getPath());
@@ -57,8 +59,8 @@ public abstract class IdentifiableMultiJsonDataLoader extends ExtendedSinglePrep
             JsonFormat jsonFormat = this.getValidFormats().get(fileExtension);
             resources.forEach(resource -> {
 
-                String packName = resource.getPackId();
-                try (Reader resourceReader = resource.getReader()) {
+                String packName = resource.sourcePackId();
+                try (Reader resourceReader = resource.openAsReader()) {
 
                     GsonReader gsonReader = new GsonReader(JsonReader.create(resourceReader, jsonFormat));
                     JsonElement jsonElement = gson.fromJson(gsonReader, JsonElement.class);
@@ -106,7 +108,7 @@ public abstract class IdentifiableMultiJsonDataLoader extends ExtendedSinglePrep
                 String source = resource.source();
                 JsonElement jsonElement = resource.jsonData();
 
-                if (jsonElement instanceof JsonObject jsonObject && !ResourceConditionsImpl.applyResourceConditions(jsonObject, directoryName, resourceId, CalioServer.getDynamicRegistries().orElse(null))) {
+                if (jsonElement instanceof JsonObject jsonObject && !ResourceConditionsImpl.applyResourceConditions(jsonObject, directoryName, resourceId, new RegistryOps.HolderLookupAdapter(CalioServer.getDynamicRegistries().orElse(null)))) {
                     this.onReject(source, resourceId);
                     entryIterator.remove();
                 }

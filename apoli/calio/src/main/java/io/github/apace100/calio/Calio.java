@@ -1,3 +1,5 @@
+//TODO this is very useful for mappings: https://linkie.shedaniel.dev/mappings?namespace=yarn&version=1.21.11&search=a&translateMode=ns&translateAs=mojang_raw
+
 package io.github.apace100.calio;
 
 import com.mojang.serialization.DataResult;

@@ -3,8 +3,8 @@ package io.github.apace100.calio.data;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 import java.util.function.Function;
 
@@ -13,12 +13,12 @@ public class CompoundSerializableDataType<T> extends SerializableDataType<T> {
     private final SerializableData serializableData;
 
     private final Function<SerializableData, MapCodec<T>> mapCodecGetter;
-    private final Function<SerializableData, PacketCodec<RegistryByteBuf, T>> packetCodecGetter;
+    private final Function<SerializableData, StreamCodec<RegistryFriendlyByteBuf, T>> packetCodecGetter;
 
     private final MapCodec<T> mapCodec;
-    private final PacketCodec<RegistryByteBuf, T> packetCodec;
+    private final StreamCodec<RegistryFriendlyByteBuf, T> packetCodec;
 
-    public CompoundSerializableDataType(SerializableData serializableData, Function<SerializableData, MapCodec<T>> mapCodecGetter, Function<SerializableData, PacketCodec<RegistryByteBuf, T>> packetCodecGetter) {
+    public CompoundSerializableDataType(SerializableData serializableData, Function<SerializableData, MapCodec<T>> mapCodecGetter, Function<SerializableData, StreamCodec<RegistryFriendlyByteBuf, T>> packetCodecGetter) {
         super(null, null, serializableData.isRoot());
 
         this.serializableData = serializableData;
@@ -37,7 +37,7 @@ public class CompoundSerializableDataType<T> extends SerializableDataType<T> {
     }
 
     @Override
-    public PacketCodec<RegistryByteBuf, T> packetCodec() {
+    public StreamCodec<RegistryFriendlyByteBuf, T> packetCodec() {
         return packetCodec;
     }
 
@@ -50,7 +50,7 @@ public class CompoundSerializableDataType<T> extends SerializableDataType<T> {
                 .xmap(to, from),
             _serializableData -> packetCodecGetter
                 .apply(_serializableData)
-                .xmap(to, from)
+                .map(to, from)
         );
     }
 
@@ -67,7 +67,7 @@ public class CompoundSerializableDataType<T> extends SerializableDataType<T> {
                 .flatXmap(to, fromWrapped),
             _serializableData -> packetCodecGetter
                 .apply(_serializableData)
-                .xmap(toUnwrapped, from)
+                .map(toUnwrapped, from)
         );
 
     }
@@ -85,7 +85,7 @@ public class CompoundSerializableDataType<T> extends SerializableDataType<T> {
                 .flatXmap(toWrapped, from),
             _serializableData -> packetCodecGetter
                 .apply(_serializableData)
-                .xmap(to, fromUnwrapped)
+                .map(to, fromUnwrapped)
         );
 
     }
@@ -103,7 +103,7 @@ public class CompoundSerializableDataType<T> extends SerializableDataType<T> {
                 .flatXmap(to, from),
             _serializableData -> packetCodecGetter
                 .apply(_serializableData)
-                .xmap(toUnwrapped, fromUnwrapped)
+                .map(toUnwrapped, fromUnwrapped)
         );
 
     }

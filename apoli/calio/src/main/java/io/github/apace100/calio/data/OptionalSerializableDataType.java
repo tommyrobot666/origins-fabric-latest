@@ -5,8 +5,8 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
 import io.github.apace100.calio.util.Validatable;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -71,8 +71,8 @@ public class OptionalSerializableDataType<A> extends SerializableDataType<Option
 		};
 	}
 
-	private static <A> PacketCodec<RegistryByteBuf, Optional<A>> createPacketCodec(SerializableDataType<A> dataType) {
-		return PacketCodec.ofStatic(
+	private static <A> StreamCodec<RegistryFriendlyByteBuf, Optional<A>> createPacketCodec(SerializableDataType<A> dataType) {
+		return StreamCodec.of(
 			(buf, optional) -> {
 				buf.writeBoolean(optional.isPresent());
 				optional.ifPresent(value -> dataType.send(buf, value));

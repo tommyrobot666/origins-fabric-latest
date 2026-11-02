@@ -9,11 +9,10 @@ import com.mojang.serialization.*;
 import io.github.apace100.calio.Calio;
 import io.github.apace100.calio.util.Validatable;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
-import net.minecraft.entity.attribute.EntityAttributeModifier;
-import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.registry.RegistryOps;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryOps;
+import net.minecraft.world.attribute.modifier.AttributeModifier;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
@@ -187,7 +186,7 @@ public class SerializableData extends MapCodec<SerializableData.Instance> {
      *  Use {@link #receive(RegistryFriendlyByteBuf)} instead.
      */
     @Deprecated
-    public Instance read(RegistryByteBuf buf) {
+    public Instance read(RegistryFriendlyByteBuf buf) {
         return receive(buf);
     }
 
@@ -225,7 +224,7 @@ public class SerializableData extends MapCodec<SerializableData.Instance> {
      *  Use {@link #send(RegistryFriendlyByteBuf, Instance)} instead.
      */
     @Deprecated
-    public void write(RegistryByteBuf buf, Instance data) {
+    public void write(RegistryFriendlyByteBuf buf, Instance data) {
         this.send(buf, data);
     }
 
@@ -277,7 +276,7 @@ public class SerializableData extends MapCodec<SerializableData.Instance> {
 
     /**
      *  <p><b>Use {@link #decode(DynamicOps, MapLike)} (or {@link #decoder()}) instead.</b></p>
-     *  <p>Some, if not most, data types may also require a {@link RegistryOps}, which can be retrieved from a {@link net.minecraft.registry.DynamicRegistryManager} or a {@link net.minecraft.registry.RegistryWrapper.WrapperLookup}.</p>
+     *  <p>Some, if not most, data types may also require a {@link RegistryOps}, which can be retrieved from a {@link net.minecraft.core.RegistryAccess} or a {@link net.minecraft.core.HolderLookup.Provider}.</p>
      */
     @Deprecated(forRemoval = true)
     public Instance read(JsonObject jsonObject) {
@@ -286,7 +285,7 @@ public class SerializableData extends MapCodec<SerializableData.Instance> {
 
     /**
      *  <p><b>Use {@link #encode(Instance, DynamicOps, RecordBuilder)} (or {@link #encoder()}) instead.</b></p>
-     *  <p>Some, if not most, data types may also require a {@link RegistryOps}, which can be retrieved from a {@link net.minecraft.registry.DynamicRegistryManager} or a {@link net.minecraft.registry.RegistryWrapper.WrapperLookup}.</p>
+     *  <p>Some, if not most, data types may also require a {@link RegistryOps}, which can be retrieved from a {@link net.minecraft.core.RegistryAccess} or a {@link net.minecraft.core.HolderLookup.Provider}.</p>
      */
     @Deprecated(forRemoval = true)
     public JsonObject write(Instance data) {
@@ -513,7 +512,7 @@ public class SerializableData extends MapCodec<SerializableData.Instance> {
             return get(name);
         }
 
-        public EntityAttributeModifier getModifier(String name) {
+        public AttributeModifier getModifier(String name) {
             return get(name);
         }
 
@@ -550,11 +549,11 @@ public class SerializableData extends MapCodec<SerializableData.Instance> {
             return dataType().write(ops, input);
         }
 
-        default E receive(RegistryByteBuf buf) {
+        default E receive(RegistryFriendlyByteBuf buf) {
             return dataType().receive(buf);
         }
 
-        default void send(RegistryByteBuf buf, E input) {
+        default void send(RegistryFriendlyByteBuf buf, E input) {
             dataType().send(buf, input);
         }
 

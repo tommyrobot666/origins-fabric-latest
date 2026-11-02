@@ -1,15 +1,12 @@
 package io.github.apace100.calio.data;
 
 import com.mojang.datafixers.util.Pair;
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
-import com.mojang.serialization.DynamicOps;
-import com.mojang.serialization.ListBuilder;
+import com.mojang.serialization.*;
 import io.github.apace100.calio.codec.CalioPacketCodecs;
 import io.github.apace100.calio.util.Validatable;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 import java.util.List;
 import java.util.ListIterator;
@@ -25,7 +22,7 @@ public class ListSerializableDataType<E> extends SerializableDataType<List<E>> {
 	private final int minSize;
 	private final int maxSize;
 
-	private ListSerializableDataType(Codec<List<E>> codec, PacketCodec<RegistryByteBuf, List<E>> packetCodec, SerializableDataType<E> elementDataType, int minSize, int maxSize) {
+	private ListSerializableDataType(Codec<List<E>> codec, StreamCodec<RegistryFriendlyByteBuf, List<E>> packetCodec, SerializableDataType<E> elementDataType, int minSize, int maxSize) {
 		super(codec, packetCodec, elementDataType.isRoot());
 		this.elementDataType = elementDataType;
 		this.minSize = minSize;
@@ -70,7 +67,7 @@ public class ListSerializableDataType<E> extends SerializableDataType<List<E>> {
 	public <S> SerializableDataType<S> xmap(Function<? super List<E>, ? extends S> to, Function<? super S, ? extends List<E>> from) {
 		ListSerializableDataType<E> self = this;
 		return recursive(dataType -> new SerializableDataType<>(
-			new Codec<>() {
+			new Codec<S>() {
 
 				@Override
 				public <T> DataResult<Pair<S, T>> decode(DynamicOps<T> ops, T input) {
@@ -85,7 +82,7 @@ public class ListSerializableDataType<E> extends SerializableDataType<List<E>> {
 				}
 
 			},
-			packetCodec().xmap(to, from),
+			packetCodec().map(to, from),
 			dataType.isRoot()
 		));
 	}
@@ -94,7 +91,7 @@ public class ListSerializableDataType<E> extends SerializableDataType<List<E>> {
 	public <S> SerializableDataType<S> comapFlatMap(Function<? super List<E>, ? extends DataResult<? extends S>> to, Function<? super S, ? extends List<E>> from) {
 		ListSerializableDataType<E> self = this;
 		return recursive(dataType -> new SerializableDataType<>(
-			new Codec<>() {
+			new Codec<S>() {
 
 				@SuppressWarnings("unchecked")
 				@Override
@@ -110,7 +107,7 @@ public class ListSerializableDataType<E> extends SerializableDataType<List<E>> {
 				}
 
 			},
-			packetCodec().xmap(list -> to.apply(list).getOrThrow(), from),
+			packetCodec().map(list -> to.apply(list).getOrThrow(), from),
 			dataType.isRoot()
 		));
 	}
@@ -119,7 +116,7 @@ public class ListSerializableDataType<E> extends SerializableDataType<List<E>> {
 	public <S> SerializableDataType<S> flatComapMap(Function<? super List<E>, ? extends S> to, Function<? super S, ? extends DataResult<? extends List<E>>> from) {
 		ListSerializableDataType<E> self = this;
 		return recursive(dataType -> new SerializableDataType<>(
-			new Codec<>() {
+			new Codec<S>() {
 
 				@Override
 				public <T> DataResult<Pair<S, T>> decode(DynamicOps<T> ops, T input) {
@@ -135,7 +132,7 @@ public class ListSerializableDataType<E> extends SerializableDataType<List<E>> {
 				}
 
 			},
-			packetCodec().xmap(to, s -> from.apply(s).getOrThrow()),
+			packetCodec().map(to, s -> from.apply(s).getOrThrow()),
 			dataType.isRoot()
 		));
 	}
@@ -144,7 +141,7 @@ public class ListSerializableDataType<E> extends SerializableDataType<List<E>> {
 	public <S> SerializableDataType<S> flatXmap(Function<? super List<E>, ? extends DataResult<? extends S>> to, Function<? super S, ? extends DataResult<? extends List<E>>> from) {
 		ListSerializableDataType<E> self = this;
 		return recursive(dataType -> new SerializableDataType<>(
-			new Codec<>() {
+			new Codec<S>() {
 
 				@SuppressWarnings("unchecked")
 				@Override
@@ -161,7 +158,7 @@ public class ListSerializableDataType<E> extends SerializableDataType<List<E>> {
 				}
 
 			},
-			packetCodec().xmap(list -> to.apply(list).getOrThrow(), s -> from.apply(s).getOrThrow()),
+			packetCodec().map(list -> to.apply(list).getOrThrow(), s -> from.apply(s).getOrThrow()),
 			dataType.isRoot()
 		));
 	}
@@ -170,7 +167,7 @@ public class ListSerializableDataType<E> extends SerializableDataType<List<E>> {
 	public SerializableDataType<List<E>> validate(Function<List<E>, DataResult<List<E>>> checker) {
 
 		Codec<List<E>> codec = createListCodec(elementDataType, minSize, maxSize);
-		PacketCodec<RegistryByteBuf, List<E>> packetCodec = packetCodec().xmap(list -> checker.apply(list).getOrThrow(), list -> checker.apply(list).getOrThrow());
+		StreamCodec<RegistryFriendlyByteBuf, List<E>> packetCodec = packetCodec().map(list -> checker.apply(list).getOrThrow(), list -> checker.apply(list).getOrThrow());
 
 		return new ListSerializableDataType<>(codec, packetCodec, elementDataType, minSize, maxSize);
 

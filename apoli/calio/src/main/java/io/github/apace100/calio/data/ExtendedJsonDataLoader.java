@@ -6,10 +6,13 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import io.github.apace100.calio.CalioServer;
 import net.fabricmc.fabric.impl.resource.conditions.ResourceConditionsImpl;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.profiler.Profiler;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryOps;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 import org.apache.commons.io.FilenameUtils;
+import org.jspecify.annotations.NonNull;
 import org.quiltmc.parsers.json.JsonFormat;
 import org.quiltmc.parsers.json.JsonReader;
 import org.quiltmc.parsers.json.gson.GsonReader;
@@ -21,7 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- *  Similar to {@link net.minecraft.resource.JsonDataLoader}, except it supports the JSON5 and JSONC spec.
+ *  Similar to {@link net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener}, except it supports the JSON5 and JSONC spec.
  */
 public abstract class ExtendedJsonDataLoader extends ExtendedSinglePreparationResourceReloader<Map<Identifier, JsonElement>> implements IExtendedJsonDataLoader {
 
@@ -36,18 +39,18 @@ public abstract class ExtendedJsonDataLoader extends ExtendedSinglePreparationRe
     }
 
     @Override
-    protected Map<Identifier, JsonElement> prepare(ResourceManager manager, Profiler profiler) {
+    protected @NonNull Map<Identifier, JsonElement> prepare(final ResourceManager manager, final @NonNull ProfilerFiller profiler) {
 
         Map<Identifier, JsonElement> result = new HashMap<>();
-        manager.findResources(directoryName, this::hasValidFormat).forEach((fileId, resource) -> {
+        manager.listResources(directoryName, this::hasValidFormat).forEach((fileId, resource) -> {
 
             Identifier resourceId = this.trim(fileId, directoryName);
             String fileExtension = "." + FilenameUtils.getExtension(fileId.getPath());
 
             JsonFormat jsonFormat = this.getValidFormats().get(fileExtension);
-            String packName = resource.getPackId();
+            String packName = resource.sourcePackId();
 
-            try (Reader resourceReader = resource.getReader()) {
+            try (Reader resourceReader = resource.openAsReader()) {
 
                 GsonReader gsonReader = new GsonReader(JsonReader.create(resourceReader, jsonFormat));
                 JsonElement jsonElement = gson.fromJson(gsonReader, JsonElement.class);
@@ -81,7 +84,7 @@ public abstract class ExtendedJsonDataLoader extends ExtendedSinglePreparationRe
             Identifier id = preparedEntry.getKey();
             JsonElement jsonElement = preparedEntry.getValue();
 
-            if (!(jsonElement instanceof JsonObject jsonObject) || ResourceConditionsImpl.applyResourceConditions(jsonObject, directoryName, id, CalioServer.getDynamicRegistries().orElse(null))) {
+            if (!(jsonElement instanceof JsonObject jsonObject) || ResourceConditionsImpl.applyResourceConditions(jsonObject, directoryName, id, new RegistryOps.HolderLookupAdapter(CalioServer.getDynamicRegistries().orElse(null)))) {
                 continue;
             }
 

@@ -1,6 +1,6 @@
 package io.github.apace100.calio.data;
 
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
 import org.apache.commons.io.FilenameUtils;
 import org.quiltmc.parsers.json.JsonFormat;
@@ -47,7 +47,7 @@ public interface IExtendedJsonDataLoader {
 
     default Identifier trim(Identifier fileId, String directoryName) {
         String path = FilenameUtils.removeExtension(fileId.getPath()).substring(directoryName.length() + 1);
-        return Identifier.of(fileId.getNamespace(), path);
+        return Identifier.fromNamespaceAndPath(fileId.getNamespace(), path);
     }
 
     default boolean hasValidFormat(Identifier fileId) {

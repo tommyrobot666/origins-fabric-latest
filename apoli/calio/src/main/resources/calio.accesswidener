@@ -6,13 +6,14 @@ accessible method net/minecraft/recipe/Ingredient$TagEntry <init> (Lnet/minecraf
 accessible method net/minecraft/recipe/Ingredient ofEntries (Ljava/util/stream/Stream;)Lnet/minecraft/recipe/Ingredient;
 extendable class net/minecraft/recipe/Ingredient
 accessible method net/minecraft/recipe/Ingredient <init> ([Lnet/minecraft/recipe/Ingredient$Entry;)V
-extendable method net/minecraft/resource/SinglePreparationResourceReloader reload (Lnet/minecraft/resource/ResourceReloader$Synchronizer;Lnet/minecraft/resource/ResourceManager;Lnet/minecraft/util/profiler/Profiler;Lnet/minecraft/util/profiler/Profiler;Ljava/util/concurrent/Executor;Ljava/util/concurrent/Executor;)Ljava/util/concurrent/CompletableFuture;
+extendable method net/minecraft/server/packs/resources/SimplePreparableReloadListener reload (Lnet/minecraft/server/packs/resources/PreparableReloadListener$SharedState;Ljava/util/concurrent/Executor;Lnet/minecraft/server/packs/resources/PreparableReloadListener$PreparationBarrier;Ljava/util/concurrent/Executor;)Ljava/util/concurrent/CompletableFuture;
 accessible field net/minecraft/component/type/FoodComponent$Builder usingConvertsTo Ljava/util/Optional;
 extendable class net/minecraft/resources/Identifier
 accessible method net/minecraft/resources/Identifier <init> (Ljava/lang/String;Ljava/lang/String;)V
 extendable class net/minecraft/registry/ReloadableRegistries$ReloadableWrapperLookup
-accessible method net/minecraft/registry/tag/TagEntry <init> (Lnet/minecraft/util/dynamic/Codecs$TagEntryId;Z)V
+accessible method net/minecraft/tags/TagEntry <init> (Lnet/minecraft/util/ExtraCodecs$TagOrElementLocation;Z)V
 accessible method net/minecraft/util/collection/WeightedList <init> (Ljava/util/List;)V
 accessible method net/minecraft/util/collection/WeightedList$Entry <init> (Ljava/lang/Object;I)V
 accessible class net/minecraft/registry/RegistryOps$CachedRegistryInfoGetter
 accessible field net/minecraft/server/level/ServerPlayer server Lnet/minecraft/server/MinecraftServer;
+accessible class net/minecraft/resources/RegistryOps$HolderLookupAdapter

@@ -1,8 +1,8 @@
 package io.github.apace100.calio.mixin;
 
-import net.minecraft.registry.tag.TagEntry;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.dynamic.Codecs;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagEntry;
+import net.minecraft.util.ExtraCodecs;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 public interface TagEntryAccessor {
 
     @Invoker
-    Codecs.TagEntryId callGetIdForCodec();
+    ExtraCodecs.TagOrElementLocation callGetIdForCodec();
 
     @Accessor
     Identifier getId();

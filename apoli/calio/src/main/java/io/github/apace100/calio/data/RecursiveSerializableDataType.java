@@ -3,8 +3,8 @@ package io.github.apace100.calio.data;
 import com.google.common.base.Suppliers;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -30,7 +30,7 @@ public class RecursiveSerializableDataType<T> extends SerializableDataType<T> {
     }
 
     @Override
-    public PacketCodec<RegistryByteBuf, T> packetCodec() {
+    public StreamCodec<RegistryFriendlyByteBuf, T> packetCodec() {
         return dataType.get().packetCodec();
     }
 
