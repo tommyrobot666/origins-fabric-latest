@@ -2,10 +2,12 @@ plugins {
 	id 'net.fabricmc.fabric-loom' version "${loom_version}"
 	id 'maven-publish'
 }
-//
-//loom {
-//	accessWidenerPath = file("apoli/src/main/resources/apoli.accesswidener")
-//}
+
+def ENV = System.getenv()
+
+base {
+	archivesName = project.archives_base_name
+}
 
 repositories {
 	mavenLocal()
@@ -127,15 +129,15 @@ publishing {
 	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
 	repositories {
 		// uncomment to publish to the local maven
-//		mavenLocal()
-//		if (ENV.MAVEN_URL && ENV.MAVEN_USERNAME && ENV.MAVEN_PASSWORD) {
-//			maven {
-//				url = ENV.MAVEN_URL
-//				credentials {
-//					username = ENV.MAVEN_USERNAME
-//					password = ENV.MAVEN_PASSWORD
-//				}
-//			}
-//		}
+		mavenLocal()
+		if (ENV.MAVEN_URL && ENV.MAVEN_USERNAME && ENV.MAVEN_PASSWORD) {
+			maven {
+				url = ENV.MAVEN_URL
+				credentials {
+					username = ENV.MAVEN_USERNAME
+					password = ENV.MAVEN_PASSWORD
+				}
+			}
+		}
 	}
 }
