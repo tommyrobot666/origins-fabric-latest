@@ -1,15 +1,6 @@
 plugins {
-	id 'fabric-loom' version '1.7-SNAPSHOT'
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
 	id 'maven-publish'
-}
-
-version = project.mod_version
-group = project.maven_group
-
-def ENV = System.getenv()
-
-base {
-	archivesName = project.archives_base_name
 }
 
 repositories {
@@ -68,41 +59,38 @@ repositories {
 }
 
 dependencies {
-
-	//to change the versions see the gradle.properties file
+	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-	modApi "io.github.apace100:apoli:${project.apoli_version}"
-	include "io.github.apace100:apoli:${project.apoli_version}"
+	// causes error "Expected official namespace for access widener entry, found: intermediary in mod: additionalentityattributes"
+//	api "io.github.apace100:apoli:${project.apoli_version}"
+//	include "io.github.apace100:apoli:${project.apoli_version}"
 
-	modApi("me.shedaniel.cloth:cloth-config-fabric:${project.clothconfig_version}") {
+	api("me.shedaniel.cloth:cloth-config-fabric:${project.clothconfig_version}") {
 		exclude(group: "net.fabricmc.fabric-api")
 	}
 
-	modCompileOnlyApi "carpet:fabric-carpet:${project.carpet_version}"
-	modImplementation "com.terraformersmc:modmenu:${project.modmenu_version}"
+//	compileOnlyApi "carpet:fabric-carpet:${project.carpet_version}"
+	compileOnlyApi "maven.modrinth:TQTTVgYE:yt9oDFOj"
+	implementation "com.terraformersmc:modmenu:${project.modmenu_version}"
 
 }
 
 processResources {
-	inputs.property "version", project.version
+	def version = project.version
+	inputs.property "version", version
 
 	filesMatching("fabric.mod.json") {
-		expand "version": project.version
+		expand "version": version
 	}
 }
 
-// ensure that the encoding is set to UTF-8, no matter what the system default is
-// this fixes some edge cases with special characters not displaying correctly
-// see http://yodaconditions.net/blog/fix-for-java-file-encoding-problems-with-gradle.html
 tasks.withType(JavaCompile).configureEach {
-	it.options.encoding = "UTF-8"
-	it.options.release = 21
+	it.options.release = 25
 }
 
 java {
@@ -111,13 +99,16 @@ java {
 	// If you remove this line, sources will not be generated.
 	withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
 }
 
 jar {
+	def projectName = project.name
+	inputs.property "projectName", projectName
+
 	from("LICENSE") {
-		rename { "${it}_${base.archivesName.get()}" }
+		rename { "${it}_$projectName"}
 	}
 }
 
@@ -129,18 +120,18 @@ publishing {
 		}
 	}
 
-	// select the repositories you want to publish to
+	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
 	repositories {
 		// uncomment to publish to the local maven
-		mavenLocal()
-		if (ENV.MAVEN_URL && ENV.MAVEN_USERNAME && ENV.MAVEN_PASSWORD) {
-			maven {
-				url = ENV.MAVEN_URL
-				credentials {
-					username = ENV.MAVEN_USERNAME
-					password = ENV.MAVEN_PASSWORD
-				}
-			}
-		}
+//		mavenLocal()
+//		if (ENV.MAVEN_URL && ENV.MAVEN_USERNAME && ENV.MAVEN_PASSWORD) {
+//			maven {
+//				url = ENV.MAVEN_URL
+//				credentials {
+//					username = ENV.MAVEN_USERNAME
+//					password = ENV.MAVEN_PASSWORD
+//				}
+//			}
+//		}
 	}
 }
