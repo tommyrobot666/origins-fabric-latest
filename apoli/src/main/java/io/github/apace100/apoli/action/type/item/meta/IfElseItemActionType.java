@@ -1,0 +1,53 @@
+package io.github.apace100.apoli.action.type.item.meta;
+
+import io.github.apace100.apoli.action.ActionConfiguration;
+import io.github.apace100.apoli.action.ItemAction;
+import io.github.apace100.apoli.action.context.ItemActionContext;
+import io.github.apace100.apoli.action.type.ItemActionType;
+import io.github.apace100.apoli.action.type.ItemActionTypes;
+import io.github.apace100.apoli.action.type.meta.IfElseMetaActionType;
+import io.github.apace100.apoli.condition.ItemCondition;
+import io.github.apace100.apoli.condition.context.ItemConditionContext;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Optional;
+
+public class IfElseItemActionType extends ItemActionType implements IfElseMetaActionType<ItemActionContext, ItemConditionContext, ItemAction, ItemCondition> {
+
+	private final ItemCondition condition;
+
+	private final ItemAction ifAction;
+	private final Optional<ItemAction> elseAction;
+
+	public IfElseItemActionType(ItemCondition condition, ItemAction ifAction, Optional<ItemAction> elseAction) {
+		this.condition = condition;
+		this.ifAction = ifAction;
+		this.elseAction = elseAction;
+	}
+
+	@Override
+	public void accept(ItemActionContext context) {
+		this.executeAction(context);
+	}
+
+	@Override
+	public @NotNull ActionConfiguration<?> getConfig() {
+		return ItemActionTypes.IF_ELSE;
+	}
+
+	@Override
+	public ItemCondition condition() {
+		return condition;
+	}
+
+	@Override
+	public ItemAction ifAction() {
+		return ifAction;
+	}
+
+	@Override
+	public Optional<ItemAction> elseAction() {
+		return elseAction;
+	}
+
+}

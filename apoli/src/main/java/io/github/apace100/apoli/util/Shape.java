@@ -1,5 +1,6 @@
 package io.github.apace100.apoli.util;
 
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -7,36 +8,38 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Set;
 
 public enum Shape {
+
     CUBE, CHEBYSHEV,
     STAR, MANHATTAN,
     SPHERE, EUCLIDEAN;
 
-    public static Collection<BlockPos> getPositions(BlockPos center, Shape shape, int radius) {
-        Set<BlockPos> positions = new HashSet<>();
-        for(int i = -radius; i <= radius; i++) {
-            for(int j = -radius; j <= radius; j++) {
-                for(int k = -radius; k <= radius; k++) {
-                    if(shape == Shape.CUBE || shape == Shape.CHEBYSHEV
-                            || (shape == Shape.SPHERE || shape == Shape.EUCLIDEAN)
-                                && i * i + j * j + k * k <= radius * radius
-                                // The radius can't be negative here (the loops aren't even entered in that case)
-                                // so there's no behavior change from testing that sqrt(i*i + j*j + k*k) <= radius
-                            || (Math.abs(i) + Math.abs(j) + Math.abs(k)) <= radius) {
-                        positions.add(new BlockPos(center.add(i, j, k)));
+    public final Collection<BlockPos> getBlockPositions(BlockPos center, int radius) {
+
+        ObjectOpenHashSet<BlockPos> blockPositions = new ObjectOpenHashSet<>();
+
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -radius; y <= radius; y++) {
+                for (int z = -radius; z <= radius; z++) {
+
+                    if (this.getBlockDistance(x, y, z) <= radius) {
+                        blockPositions.add(new BlockPos(center.add(x, y, z)));
                     }
+
                 }
             }
         }
-        return positions;
+
+        blockPositions.trim();
+        return blockPositions;
+
     }
 
-    public static Set<Entity> getEntities(Shape shape, World world, Vec3d center, double radius) {
+    public final Collection<Entity> getEntities(World world, Vec3d center, double radius) {
 
-        Set<Entity> entities = new HashSet<>();
+        ObjectOpenHashSet<Entity> entities = new ObjectOpenHashSet<>();
 
         double diameter = radius * 2;
         double x, y, z;
@@ -47,21 +50,52 @@ public enum Shape {
             y = Math.abs(entity.getY() - center.getY());
             z = Math.abs(entity.getZ() - center.getZ());
 
-            if (getDistance(shape, x, y, z) < radius) {
+            if (this.getDistance(x, y, z) <= radius + 1) {
                 entities.add(entity);
             }
 
         }
 
+        entities.trim();
         return entities;
 
     }
 
-    public static double getDistance(Shape shape, double xDistance, double yDistance, double zDistance){
-        return switch (shape){
-            case SPHERE, EUCLIDEAN -> Math.sqrt(xDistance * xDistance + yDistance * yDistance + zDistance * zDistance);
-            case STAR, MANHATTAN -> xDistance + yDistance + zDistance;
-            case CUBE, CHEBYSHEV -> Math.max(Math.max(xDistance, yDistance), zDistance);
+    private double getBlockDistance(int x, int y, int z) {
+        return switch (this) {
+            case CUBE, CHEBYSHEV ->
+                0;
+            case STAR, MANHATTAN ->
+                Math.abs(x) + Math.abs(y) + Math.abs(z);
+            default ->
+                getDistance(x, y, z);
         };
     }
+
+    public double getDistance(double x, double y, double z) {
+        return switch (this) {
+            case CUBE, CHEBYSHEV ->
+                Math.max(Math.max(x, y), z);
+            case STAR, MANHATTAN ->
+                x + y + z;
+            case SPHERE, EUCLIDEAN ->
+                Math.sqrt(x * x + y * y + z * z);
+        };
+    }
+
+    @Deprecated(forRemoval = true)
+    public static Collection<BlockPos> getPositions(BlockPos center, Shape shape, int radius) {
+        return shape.getBlockPositions(center, radius);
+    }
+
+    @Deprecated(forRemoval = true)
+    public static Set<Entity> getEntities(Shape shape, World world, Vec3d center, double radius) {
+        return (ObjectOpenHashSet<Entity>) shape.getEntities(world, center, radius);    // Should be safe
+    }
+
+    @Deprecated(forRemoval = true)
+    public static double getDistance(Shape shape, double xDistance, double yDistance, double zDistance){
+        return shape.getDistance(xDistance, yDistance, zDistance);
+    }
+
 }

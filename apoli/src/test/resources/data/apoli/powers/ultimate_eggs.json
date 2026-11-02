@@ -1,11 +1,11 @@
 {
-  "type": "apoli:modify_projectile_damage",
-  "modifier": {
-    "value": 200,
-    "operation": "addition"
-  },
-  "damage_condition": {
-    "type": "apoli:projectile",
-    "projectile": "minecraft:egg"
-  }
+	"type": "apoli:modify_projectile_damage",
+	"modifier": {
+		"amount": 200,
+		"operation": "add_base_early"
+	},
+	"damage_condition": {
+		"type": "apoli:projectile",
+		"projectile": "minecraft:egg"
+	}
 }

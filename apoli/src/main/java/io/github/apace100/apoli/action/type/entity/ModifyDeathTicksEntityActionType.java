@@ -1,0 +1,45 @@
+package io.github.apace100.apoli.action.type.entity;
+
+import io.github.apace100.apoli.action.ActionConfiguration;
+import io.github.apace100.apoli.action.context.EntityActionContext;
+import io.github.apace100.apoli.action.type.EntityActionType;
+import io.github.apace100.apoli.action.type.EntityActionTypes;
+import io.github.apace100.apoli.data.TypedDataObjectFactory;
+import io.github.apace100.apoli.util.modifier.Modifier;
+import io.github.apace100.calio.data.SerializableData;
+import net.minecraft.entity.LivingEntity;
+import org.jetbrains.annotations.NotNull;
+
+public class ModifyDeathTicksEntityActionType extends EntityActionType {
+
+    public static final TypedDataObjectFactory<ModifyDeathTicksEntityActionType> DATA_FACTORY = TypedDataObjectFactory.simple(
+        new SerializableData()
+            .add("modifier", Modifier.DATA_TYPE),
+        data -> new ModifyDeathTicksEntityActionType(
+            data.get("modifier")
+        ),
+        (actionType, serializableData) -> serializableData.instance()
+            .set("modifier", actionType.modifier)
+    );
+
+    private final Modifier modifier;
+
+    public ModifyDeathTicksEntityActionType(Modifier modifier) {
+        this.modifier = modifier;
+    }
+
+    @Override
+    public void accept(EntityActionContext context) {
+
+        if (context.entity() instanceof LivingEntity livingEntity) {
+            livingEntity.deathTime = (int) modifier.apply(livingEntity, livingEntity.deathTime);
+        }
+
+    }
+
+    @Override
+    public @NotNull ActionConfiguration<?> getConfig() {
+        return EntityActionTypes.MODIFY_DEATH_TICKS;
+    }
+
+}

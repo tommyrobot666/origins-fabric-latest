@@ -1,55 +1,58 @@
 package io.github.apace100.apoli;
 
-import dev.onyxstudios.cca.api.v3.entity.EntityComponentFactoryRegistry;
-import dev.onyxstudios.cca.api.v3.entity.EntityComponentInitializer;
-import dev.onyxstudios.cca.api.v3.entity.RespawnCopyStrategy;
+import io.github.apace100.apoli.action.type.BiEntityActionTypes;
+import io.github.apace100.apoli.action.type.BlockActionTypes;
+import io.github.apace100.apoli.action.type.EntityActionTypes;
+import io.github.apace100.apoli.action.type.ItemActionTypes;
 import io.github.apace100.apoli.command.PowerCommand;
 import io.github.apace100.apoli.command.ResourceCommand;
 import io.github.apace100.apoli.component.PowerHolderComponent;
 import io.github.apace100.apoli.component.PowerHolderComponentImpl;
-import io.github.apace100.apoli.global.GlobalPowerSetLoader;
+import io.github.apace100.apoli.component.item.ApoliDataComponentTypes;
+import io.github.apace100.apoli.component.item.ItemPowersComponent;
+import io.github.apace100.apoli.condition.type.*;
+import io.github.apace100.apoli.data.ApoliContainerTypes;
+import io.github.apace100.apoli.global.GlobalPowerSetManager;
 import io.github.apace100.apoli.integration.PowerIntegration;
+import io.github.apace100.apoli.loot.condition.ApoliLootConditionTypes;
+import io.github.apace100.apoli.loot.function.ApoliLootFunctionTypes;
+import io.github.apace100.apoli.networking.ModPackets;
 import io.github.apace100.apoli.networking.ModPacketsC2S;
-import io.github.apace100.apoli.power.PowerTypes;
-import io.github.apace100.apoli.power.factory.PowerFactories;
-import io.github.apace100.apoli.power.factory.action.BiEntityActions;
-import io.github.apace100.apoli.power.factory.action.BlockActions;
-import io.github.apace100.apoli.power.factory.action.EntityActions;
-import io.github.apace100.apoli.power.factory.action.ItemActions;
-import io.github.apace100.apoli.power.factory.condition.*;
+import io.github.apace100.apoli.power.PowerManager;
+import io.github.apace100.apoli.power.type.ModifyEnchantmentLevelPowerType;
+import io.github.apace100.apoli.power.type.PowerTypes;
+import io.github.apace100.apoli.recipe.ApoliRecipeSerializers;
 import io.github.apace100.apoli.registry.ApoliClassData;
-import io.github.apace100.apoli.util.*;
+import io.github.apace100.apoli.util.ApoliConfig;
+import io.github.apace100.apoli.util.GainedPowerCriterion;
 import io.github.apace100.apoli.util.modifier.ModifierOperations;
-import io.github.apace100.calio.resource.OrderedResourceListenerInitializer;
-import io.github.apace100.calio.resource.OrderedResourceListenerManager;
+import io.github.apace100.calio.Calio;
+import io.github.apace100.calio.util.CalioResourceConditions;
 import io.github.ladysnake.pal.AbilitySource;
 import io.github.ladysnake.pal.Pal;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
-import net.fabricmc.fabric.api.resource.conditions.v1.ResourceConditions;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.advancement.criterion.Criteria;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.registry.Registries;
-import net.minecraft.resource.ResourceType;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Identifier;
-import net.minecraft.registry.Registry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.ladysnake.cca.api.v3.entity.EntityComponentFactoryRegistry;
+import org.ladysnake.cca.api.v3.entity.EntityComponentInitializer;
+import org.ladysnake.cca.api.v3.entity.RespawnCopyStrategy;
 
-public class Apoli implements ModInitializer, EntityComponentInitializer, OrderedResourceListenerInitializer {
+public class Apoli implements ModInitializer, EntityComponentInitializer {
 
 	public static ApoliConfig config;
-
 	public static MinecraftServer server;
-
-	public static final Scheduler SCHEDULER = new Scheduler();
 
 	public static final String MODID = "apoli";
 	public static final Logger LOGGER = LogManager.getLogger(Apoli.class);
+
 	public static String VERSION = "";
 	public static int[] SEMVER;
 
@@ -59,7 +62,9 @@ public class Apoli implements ModInitializer, EntityComponentInitializer, Ordere
 
 	@Override
 	public void onInitialize() {
-		ServerLifecycleEvents.SERVER_STARTED.register(s -> server = s);
+
+		ServerLifecycleEvents.SERVER_STARTING.register(server -> Apoli.server = server);
+		ServerLifecycleEvents.SERVER_STOPPING.register(server -> Apoli.server = null);
 
 		FabricLoader.getInstance().getModContainer(MODID).ifPresent(modContainer -> {
 			VERSION = modContainer.getMetadata().getVersion().getFriendlyString();
@@ -76,50 +81,66 @@ public class Apoli implements ModInitializer, EntityComponentInitializer, Ordere
 			}
 		});
 
+		ModPackets.register();
 		ModPacketsC2S.register();
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-			PowerCommand.register(dispatcher);
-			ResourceCommand.register(dispatcher);
+
+			var rootNode = dispatcher.getRoot();
+
+			PowerCommand.register(rootNode);
+			ResourceCommand.register(rootNode);
+
+			if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+				ModifyEnchantmentLevelPowerType.DebugCommand.register(rootNode);
+			}
+
 		});
 
-		Registry.register(Registries.RECIPE_SERIALIZER, Apoli.identifier("power_restricted"), PowerRestrictedCraftingRecipe.SERIALIZER);
-		Registry.register(Registries.RECIPE_SERIALIZER, Apoli.identifier("modified"), ModifiedCraftingRecipe.SERIALIZER);
+		ApoliLootFunctionTypes.register();
+		ApoliLootConditionTypes.register();
 
-		Registry.register(Registries.LOOT_FUNCTION_TYPE, Apoli.identifier("add_power"), AddPowerLootFunction.TYPE);
-		Registry.register(Registries.LOOT_FUNCTION_TYPE, Apoli.identifier("remove_power"), RemovePowerLootFunction.TYPE);
-
-		Registry.register(Registries.LOOT_CONDITION_TYPE, Apoli.identifier("power"), PowerLootCondition.TYPE);
-
+		ApoliContainerTypes.register();
 		ApoliClassData.registerAll();
 
 		ModifierOperations.registerAll();
+		ApoliDataComponentTypes.register();
+		ApoliRecipeSerializers.register();
 
-		PowerFactories.register();
-		EntityConditions.register();
-		BiEntityConditions.register();
-		ItemConditions.register();
-		BlockConditions.register();
-		DamageConditions.register();
-		FluidConditions.register();
-		BiomeConditions.register();
-		EntityActions.register();
-		ItemActions.register();
-		BlockActions.register();
-		BiEntityActions.register();
+		BiEntityConditionTypes.register();
+		BiomeConditionTypes.register();
+		BlockConditionTypes.register();
+		DamageConditionTypes.register();
+		EntityConditionTypes.register();
+		FluidConditionTypes.register();
+		ItemConditionTypes.register();
+
+		EntityActionTypes.register();
+		ItemActionTypes.register();
+		BlockActionTypes.register();
+		BiEntityActionTypes.register();
+
+		PowerTypes.register();
 		PowerIntegration.register();
 
-		ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(new GlobalPowerSetLoader());
-		ResourceConditions.register(ApoliResourceConditions.ANY_NAMESPACE_LOADED, jsonObject -> ApoliResourceConditions.namespacesLoaded(jsonObject, PowerTypes.LOADED_NAMESPACES, false));
-		ResourceConditions.register(ApoliResourceConditions.ALL_NAMESPACES_LOADED, jsonObject -> ApoliResourceConditions.namespacesLoaded(jsonObject, PowerTypes.LOADED_NAMESPACES, true));
+		PowerManager.init();
+		GlobalPowerSetManager.init();
 
+		ServerEntityEvents.EQUIPMENT_CHANGE.register(ItemPowersComponent::onChangeEquipment);
+
+		CalioResourceConditions.ALIASES.addNamespaceAlias(MODID, Calio.MOD_NAMESPACE);
 		Criteria.register(GainedPowerCriterion.ID.toString(), GainedPowerCriterion.INSTANCE);
 
 		LOGGER.info("Apoli " + VERSION + " has initialized. Ready to power up your game!");
+
 	}
 
 	public static Identifier identifier(String path) {
-		return new Identifier(MODID, path);
+		return Identifier.of(MODID, path);
+	}
+
+	public static boolean onServerSide() {
+		return server != null && server.isOnThread();
 	}
 
 	@Override
@@ -130,8 +151,4 @@ public class Apoli implements ModInitializer, EntityComponentInitializer, Ordere
 			.end(PowerHolderComponentImpl::new);
 	}
 
-	@Override
-	public void registerResourceListeners(OrderedResourceListenerManager manager) {
-		manager.register(ResourceType.SERVER_DATA, new PowerTypes()).complete();
-	}
 }

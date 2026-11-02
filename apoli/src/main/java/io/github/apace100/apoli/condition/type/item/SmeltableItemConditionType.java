@@ -1,0 +1,32 @@
+package io.github.apace100.apoli.condition.type.item;
+
+import io.github.apace100.apoli.condition.ConditionConfiguration;
+import io.github.apace100.apoli.condition.context.ItemConditionContext;
+import io.github.apace100.apoli.condition.type.ItemConditionType;
+import io.github.apace100.apoli.condition.type.ItemConditionTypes;
+import net.minecraft.item.ItemStack;
+import net.minecraft.recipe.RecipeType;
+import net.minecraft.recipe.input.SingleStackRecipeInput;
+import net.minecraft.world.World;
+import org.jetbrains.annotations.NotNull;
+
+public class SmeltableItemConditionType extends ItemConditionType {
+
+    @Override
+    public boolean test(ItemConditionContext context) {
+
+        ItemStack stack = context.stack();
+        World world = context.world();
+
+        return world.getRecipeManager()
+            .getFirstMatch(RecipeType.SMELTING, new SingleStackRecipeInput(stack), world)
+            .isPresent();
+
+    }
+
+    @Override
+    public @NotNull ConditionConfiguration<?> getConfig() {
+        return ItemConditionTypes.SMELTABLE;
+    }
+
+}

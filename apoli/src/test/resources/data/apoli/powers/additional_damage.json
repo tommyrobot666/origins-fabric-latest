@@ -1,7 +1,7 @@
 {
-  "type": "apoli:modify_damage_dealt",
-  "modifier": {
-    "operation": "addition",
-    "value": 20
-  }
+	"type": "apoli:modify_damage_dealt",
+	"modifier": {
+		"operation": "add_base_early",
+		"amount": 20
+	}
 }

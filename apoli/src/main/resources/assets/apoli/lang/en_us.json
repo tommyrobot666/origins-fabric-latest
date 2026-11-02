@@ -17,6 +17,8 @@
     "commands.apoli.list.pass": "Entity %s has %s powers: [%s]",
     "commands.apoli.list.sources": "Sources: [%s]",
     "commands.apoli.power_not_found": "Unknown power: %s",
+    "commands.apoli.power_not_granted": "Entity %s did not have the power %s.",
+    "commands.apoli.power_not_resource": "Power %s is not a resource!",
     "commands.apoli.remove.fail.multiple": "No entity had the power %s.",
     "commands.apoli.remove.fail.single": "Entity %s did not have the power %s.",
     "commands.apoli.remove.success.multiple": "%s entities had the power %s removed.",
@@ -51,6 +53,8 @@
     "text.autoconfig.power_config.option.tooltips.compactUsabilityHints": "Compact Usability Hints",
     "text.autoconfig.power_config.option.tooltips.showUsabilityHints": "Show Usability Hints",
     "text.autoconfig.power_config.title": "Apoli Power Config",
+    "tooltip.apoli.stack_power.description": "  %s",
+    "tooltip.apoli.stack_power.name": "+ %s (Power)",
     "tooltip.apoli.unusable.block.multiple": "Unusable (%s)",
     "tooltip.apoli.unusable.block.single": "Unusable (%s)",
     "tooltip.apoli.unusable.bow.multiple": "Unusable (%s)",
@@ -70,5 +74,6 @@
     "tooltip.apoli.unusable.toot_horn.multiple": "Untootable (%s)",
     "tooltip.apoli.unusable.toot_horn.single": "Untootable (%s)",
     "tooltip.apoli.usability_hint.power_count": "%s powers",
-    "tooltip.apoli.usability_hint.show_powers": "Hold [%s] to show the powers"
+    "tooltip.apoli.usability_hint.show_powers": "Hold [%s] to show the powers",
+    "tooltip.apoli.power_recipe.required_power": "Requires power: %s"
 }

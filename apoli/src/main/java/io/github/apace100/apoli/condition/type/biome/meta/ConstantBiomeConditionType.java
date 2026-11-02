@@ -1,0 +1,33 @@
+package io.github.apace100.apoli.condition.type.biome.meta;
+
+import io.github.apace100.apoli.condition.ConditionConfiguration;
+import io.github.apace100.apoli.condition.context.BiomeConditionContext;
+import io.github.apace100.apoli.condition.type.BiomeConditionType;
+import io.github.apace100.apoli.condition.type.BiomeConditionTypes;
+import io.github.apace100.apoli.condition.type.meta.ConstantMetaConditionType;
+import org.jetbrains.annotations.NotNull;
+
+public class ConstantBiomeConditionType extends BiomeConditionType implements ConstantMetaConditionType {
+
+	private final boolean value;
+
+	public ConstantBiomeConditionType(boolean value) {
+		this.value = value;
+	}
+
+	@Override
+	public boolean test(BiomeConditionContext context) {
+		return value();
+	}
+
+	@Override
+	public @NotNull ConditionConfiguration<?> getConfig() {
+		return BiomeConditionTypes.CONSTANT;
+	}
+
+	@Override
+	public boolean value() {
+		return value;
+	}
+
+}

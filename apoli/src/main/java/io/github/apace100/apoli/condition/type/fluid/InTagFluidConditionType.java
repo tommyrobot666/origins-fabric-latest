@@ -1,0 +1,42 @@
+package io.github.apace100.apoli.condition.type.fluid;
+
+import io.github.apace100.apoli.condition.ConditionConfiguration;
+import io.github.apace100.apoli.condition.context.FluidConditionContext;
+import io.github.apace100.apoli.condition.type.FluidConditionType;
+import io.github.apace100.apoli.condition.type.FluidConditionTypes;
+import io.github.apace100.apoli.data.TypedDataObjectFactory;
+import io.github.apace100.calio.data.SerializableData;
+import io.github.apace100.calio.data.SerializableDataTypes;
+import net.minecraft.fluid.Fluid;
+import net.minecraft.registry.tag.TagKey;
+import org.jetbrains.annotations.NotNull;
+
+public class InTagFluidConditionType extends FluidConditionType {
+
+    public static final TypedDataObjectFactory<InTagFluidConditionType> DATA_FACTORY = TypedDataObjectFactory.simple(
+        new SerializableData()
+            .add("tag", SerializableDataTypes.FLUID_TAG),
+        data -> new InTagFluidConditionType(
+            data.get("tag")
+        ),
+        (conditionType, serializableData) -> serializableData.instance()
+            .set("tag", conditionType.tag)
+    );
+
+    private final TagKey<Fluid> tag;
+
+    public InTagFluidConditionType(TagKey<Fluid> tag) {
+        this.tag = tag;
+    }
+
+    @Override
+    public boolean test(FluidConditionContext context) {
+        return context.fluidState().isIn(tag);
+    }
+
+    @Override
+    public @NotNull ConditionConfiguration<?> getConfig() {
+        return FluidConditionTypes.IN_TAG;
+    }
+
+}

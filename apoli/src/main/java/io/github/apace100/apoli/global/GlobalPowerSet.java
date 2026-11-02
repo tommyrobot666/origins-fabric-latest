@@ -1,202 +1,139 @@
 package io.github.apace100.apoli.global;
 
+import com.google.common.collect.ImmutableList;
 import io.github.apace100.apoli.data.ApoliDataTypes;
-import io.github.apace100.apoli.power.MultiplePowerType;
-import io.github.apace100.apoli.power.PowerType;
-import io.github.apace100.apoli.power.PowerTypeReference;
-import io.github.apace100.apoli.power.PowerTypeRegistry;
+import io.github.apace100.apoli.power.MultiplePower;
+import io.github.apace100.apoli.power.Power;
+import io.github.apace100.apoli.power.PowerManager;
+import io.github.apace100.apoli.power.PowerReference;
+import io.github.apace100.calio.data.CompoundSerializableDataType;
 import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.calio.data.SerializableDataType;
 import io.github.apace100.calio.data.SerializableDataTypes;
-import io.github.apace100.calio.registry.DataObject;
-import io.github.apace100.calio.registry.DataObjectFactory;
 import io.github.apace100.calio.util.TagLike;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import java.util.LinkedList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-public class GlobalPowerSet implements Comparable<GlobalPowerSet>, DataObject<GlobalPowerSet> {
+@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+public class GlobalPowerSet implements Comparable<GlobalPowerSet> {
 
-    private final TagLike<EntityType<?>> entityTypes;
-    private final List<PowerType<?>> powerTypes;
+    public static final CompoundSerializableDataType<GlobalPowerSet> DATA_TYPE = SerializableDataType.compound(
+        new SerializableData()
+            .add("entity_types", SerializableDataTypes.ENTITY_TYPE_TAG_LIKE.optional(), Optional.empty())
+            .add("powers", ApoliDataTypes.POWER_REFERENCE.list())
+            .add("replace", SerializableDataTypes.BOOLEAN, false)
+            .add("order", SerializableDataTypes.INT, 0),
+        data -> new GlobalPowerSet(
+            data.get("entity_types"),
+            data.get("powers"),
+            data.get("replace"),
+            data.get("order")
+        ),
+        (globalPowerSet, serializableData) -> serializableData.instance()
+            .set("entity_types", globalPowerSet.getEntityTypes())
+            .set("powers", globalPowerSet.getPowerReferences())
+            .set("replace", globalPowerSet.shouldReplace())
+            .set("order", globalPowerSet.getOrder())
+    );
+
+    private final Optional<TagLike<EntityType<?>>> entityTypes;
+
+    private final List<PowerReference> powerReferences;
+    private final Set<Power> powers;
 
     private final boolean replace;
-    private final int loadingPriority;
+    private final int order;
 
-    private int order;
-
-    public GlobalPowerSet(int order, TagLike<EntityType<?>> entityTypes, List<PowerType<?>> powerTypes, boolean replace, int loadingPriority) {
+    public GlobalPowerSet(Optional<TagLike<EntityType<?>>> entityTypes, Collection<PowerReference> powerReferences, boolean replace, int order) {
         this.entityTypes = entityTypes;
-        this.powerTypes = getSubPowers(powerTypes);
+        this.powerReferences = new ObjectArrayList<>(powerReferences);
+        this.powers = getSelfAndSubPowers(powerReferences);
         this.replace = replace;
         this.order = order;
-        this.loadingPriority = loadingPriority;
     }
 
-    private List<PowerType<?>> getSubPowers(List<PowerType<?>> powerTypes) {
+    @Override
+    public int compareTo(@NotNull GlobalPowerSet that) {
+        return Integer.compare(this.order, that.order);
+    }
 
-        List<PowerType<?>> result = new LinkedList<>();
-        for (PowerType<?> powerType : powerTypes) {
+    private Set<Power> getSelfAndSubPowers(Collection<PowerReference> powerReferences) {
 
-            //  Add the power to the result list
-            result.add(powerType);
+        Set<Power> result = new ObjectLinkedOpenHashSet<>();
 
-            //  Check whether the power is an instance of a multiple power
-            MultiplePowerType<?> multiplePowerType = getMultiplePowerType(powerType);
-            if (multiplePowerType == null) {
-                continue;
-            }
+        for (PowerReference powerReference : powerReferences) {
 
-            //  Add the sub-powers of the multiple power to the result list
-            multiplePowerType.getSubPowers()
-                .stream()
-                .filter(PowerTypeRegistry::contains)
-                .map(PowerTypeRegistry::get)
-                .forEach(result::add);
+            //  Add the reference as is to the resulting set
+            powerReference.getOptionalPower().ifPresent(result::add);
 
-        }
+            //  If the reference is referring to a multiple power, query its sub-powers and add those to the
+            //  resulting set
+			powerReference.getOptionalPower()
+				.filter(MultiplePower.class::isInstance)
+				.map(MultiplePower.class::cast)
+                .map(MultiplePower::getSubPowers)
+                .ifPresent(result::addAll);
+
+		}
 
         return result;
 
     }
 
-    @Nullable
-    private MultiplePowerType<?> getMultiplePowerType(PowerType<?> powerType) {
-
-        if (powerType instanceof PowerTypeReference<?> powerTypeRef && powerTypeRef.getReferencedPowerType() instanceof MultiplePowerType<?> multiplePowerType) {
-            return multiplePowerType;
-        }
-
-        if (powerType instanceof MultiplePowerType<?> multiplePowerType) {
-            return multiplePowerType;
-        }
-
-        return null;
-
-    }
-
-    public void merge(GlobalPowerSet otherSet) {
-
-        this.order = otherSet.order;
-
-        if (otherSet.shouldReplace()) {
-            this.entityTypes.clear();
-            this.powerTypes.clear();
-        }
-
-        if (otherSet.getEntityTypes() != null) {
-            this.entityTypes.addAll(otherSet.getEntityTypes());
-        }
-
-        if (otherSet.getPowerTypes() != null) {
-            this.powerTypes.addAll(otherSet.getPowerTypes());
-        }
-
-    }
-
     public boolean doesApply(EntityType<?> entityType) {
-        return entityTypes == null || entityTypes.contains(entityType);
+        return entityTypes.map(types -> types.contains(entityType)).orElse(true);
     }
 
     public boolean doesApply(Entity entity) {
-        return doesApply(entity.getType());
+        return this.doesApply(entity.getType());
     }
 
-    public TagLike<EntityType<?>> getEntityTypes() {
+    public Optional<TagLike<EntityType<?>>> getEntityTypes() {
         return entityTypes;
     }
 
-    public List<PowerType<?>> getPowerTypes() {
-        return powerTypes;
+    public ImmutableList<PowerReference> getPowerReferences() {
+        return ImmutableList.copyOf(powerReferences);
     }
 
-    public int getLoadingPriority() {
-        return loadingPriority;
-    }
-
-    public int getOrder() {
-        return order;
+    public ImmutableList<Power> getPowers() {
+        return ImmutableList.copyOf(powers);
     }
 
     public boolean shouldReplace() {
         return replace;
     }
 
-    @Override
-    public int compareTo(@NotNull GlobalPowerSet o) {
-        return Integer.compare(order, o.order);
+    public int getOrder() {
+        return order;
     }
 
     /**
-     * Checks the defined power type references of this set to validate
-     * that they all exist and have been loaded correctly.
-     * Invalid power types will be removed from this set as a side effect.
-     * @return List containing all invalid power types that were removed from the set
+     *  Checks the defined power references of this global power set whether they all exist and have been loaded correctly.
+     *  Invalid powers will be removed from this global power set as a side effect.
+     *
+     *  @return a {@link List} of {@link Power Powers} that were removed from this global power set.
      */
-    public List<PowerType<?>> validate() {
+    public List<Power> validate() {
 
-        List<PowerType<?>> invalid = powerTypes
+        List<Power> invalid = powers
             .stream()
-            .filter(pt -> !PowerTypeRegistry.contains(pt.getIdentifier()))
+            .filter(p -> !PowerManager.contains(p.getId()))
             .collect(Collectors.toList());
-        powerTypes.removeAll(invalid);
 
-        invalid.removeIf(pt -> PowerTypeRegistry.isDisabled(pt.getIdentifier()));
+        powers.removeIf(invalid::contains);
+        invalid.removeIf(pt -> PowerManager.isDisabled(pt.getId()));
+
         return invalid;
-
-    }
-
-    @Override
-    public DataObjectFactory<GlobalPowerSet> getFactory() {
-        return FACTORY;
-    }
-
-    public static final SerializableData DATA = new SerializableData()
-        .add("replace", SerializableDataTypes.BOOLEAN, false)
-        .add("entity_types", SerializableDataTypes.ENTITY_TYPE_TAG_LIKE, null)
-        .add("powers", SerializableDataType.list(ApoliDataTypes.POWER_TYPE))
-        .add("order", SerializableDataTypes.INT, 0)
-        .add("loading_priority", SerializableDataTypes.INT, 0);
-
-    public static final DataObjectFactory<GlobalPowerSet> FACTORY = new Factory();
-
-    private static class Factory implements DataObjectFactory<GlobalPowerSet> {
-
-        @Override
-        public SerializableData getData() {
-            return DATA;
-        }
-
-        @Override
-        public GlobalPowerSet fromData(SerializableData.Instance data) {
-            return new GlobalPowerSet(
-                data.get("order"),
-                data.get("entity_types"),
-                data.get("powers"),
-                data.get("replace"),
-                data.get("loading_priority")
-            );
-        }
-
-        @Override
-        public SerializableData.Instance toData(GlobalPowerSet globalPowerSet) {
-
-            SerializableData.Instance data = DATA.new Instance();
-
-            data.set("order", globalPowerSet.getOrder());
-            data.set("entity_types", globalPowerSet.getEntityTypes());
-            data.set("powers", globalPowerSet.getPowerTypes());
-            data.set("replace", globalPowerSet.shouldReplace());
-            data.set("loading_priority", globalPowerSet.getLoadingPriority());
-
-            return data;
-
-        }
 
     }
 

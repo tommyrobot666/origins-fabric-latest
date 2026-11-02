@@ -1,11 +1,11 @@
 {
-  "type": "apoli:modify_food",
-  "food_modifier": {
-    "operation": "multiply_total",
-    "value": -1
-  },
-  "saturation_modifier": {
-    "operation": "multiply_total",
-    "value": -1
-  }
+	"type": "apoli:modify_food",
+	"food_modifier": {
+		"operation": "multiply_total_multiplicative",
+		"amount": -1
+	},
+	"saturation_modifier": {
+		"operation": "multiply_total_multiplicative",
+		"amount": -1
+	}
 }

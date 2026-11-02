@@ -31,8 +31,8 @@
 	"damage": {
 		"type": "apoli:modify_damage_dealt",
 		"modifier": {
-			"operation": "multiply_base",
-			"value": 0.5
+			"operation": "multiply_base_multiplicative",
+			"amount": 0.5
 		},
 		"bientity_condition": {
 			"type": "apoli:and",

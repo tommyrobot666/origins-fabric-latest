@@ -1,7 +1,7 @@
 {
-  "type": "apoli:modify_grindstone",
-  "result_type": "specified",
-  "result_stack": {
-    "item": "minecraft:air"
-  }
+	"type": "apoli:modify_grindstone",
+	"result_type": "specified",
+	"result_stack": {
+		"id": "minecraft:air"
+	}
 }

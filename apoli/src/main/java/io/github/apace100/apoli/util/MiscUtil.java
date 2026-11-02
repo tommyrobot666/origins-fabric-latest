@@ -1,26 +1,42 @@
 package io.github.apace100.apoli.util;
 
-import com.google.gson.JsonSyntaxException;
-import io.github.apace100.apoli.data.DamageSourceDescription;
+import com.google.common.collect.ImmutableSet;
+import com.mojang.serialization.DataResult;
+import io.github.apace100.apoli.condition.Condition;
+import io.github.apace100.apoli.condition.context.BlockConditionContext;
+import io.github.apace100.apoli.condition.type.ConditionType;
+import io.github.apace100.apoli.condition.type.meta.MultiMetaConditionType;
+import io.github.apace100.apoli.mixin.SlotRangesAccessor;
+import io.github.apace100.apoli.util.context.ConditionContext;
+import io.github.apace100.calio.data.SerializableData;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.pattern.CachedBlockPosition;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.SpawnReason;
+import net.minecraft.entity.*;
+import net.minecraft.entity.attribute.EntityAttribute;
 import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.damage.DamageSources;
-import net.minecraft.entity.damage.DamageType;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.fluid.FluidState;
+import net.minecraft.inventory.SlotRange;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.network.packet.CustomPayload;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.ExplosionS2CPacket;
+import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKey;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.BlockView;
@@ -29,9 +45,11 @@ import net.minecraft.world.explosion.Explosion;
 import net.minecraft.world.explosion.ExplosionBehavior;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class MiscUtil {
@@ -41,12 +59,12 @@ public final class MiscUtil {
     }
 
     public static void createExplosion(World world, Entity entity, Vec3d pos, float power, boolean createFire, Explosion.DestructionType destructionType, ExplosionBehavior behavior) {
-        createExplosion(world, entity, world.getDamageSources().explosion(null), pos.getX(), pos.getY(), pos.getZ(), power, createFire, destructionType, behavior);
+        createExplosion(world, entity, null, pos.getX(), pos.getY(), pos.getZ(), power, createFire, destructionType, behavior);
     }
 
-    public static void createExplosion(World world, Entity entity, DamageSource damageSource, double x, double y, double z, float power, boolean createFire, Explosion.DestructionType destructionType, ExplosionBehavior behavior) {
+    public static void createExplosion(World world, @Nullable Entity entity, @Nullable DamageSource damageSource, double x, double y, double z, float power, boolean createFire, Explosion.DestructionType destructionType, ExplosionBehavior behavior) {
 
-        Explosion explosion = new Explosion(world, entity, damageSource, behavior, x, y, z, power, createFire, destructionType);
+        Explosion explosion = new Explosion(world, entity, damageSource, behavior, x, y, z, power, createFire, destructionType, ParticleTypes.EXPLOSION, ParticleTypes.EXPLOSION_EMITTER, SoundEvents.ENTITY_GENERIC_EXPLODE);
 
         explosion.collectBlocksAndDamageEntities();
         explosion.affectWorld(world.isClient);
@@ -62,7 +80,7 @@ public final class MiscUtil {
 
         for (ServerPlayerEntity serverPlayerEntity : serverWorld.getPlayers()) {
             if (serverPlayerEntity.squaredDistanceTo(x, y, z) < 4096.0) {
-                serverPlayerEntity.networkHandler.sendPacket(new ExplosionS2CPacket(x, y, z, power, explosion.getAffectedBlocks(), explosion.getAffectedPlayers().get(serverPlayerEntity)));
+                serverPlayerEntity.networkHandler.sendPacket(new ExplosionS2CPacket(x, y, z, power, explosion.getAffectedBlocks(), explosion.getAffectedPlayers().get(serverPlayerEntity), explosion.getDestructionType(), explosion.getParticle(), explosion.getEmitterParticle(), explosion.getSoundEvent()));
             }
         }
 
@@ -87,6 +105,32 @@ public final class MiscUtil {
             @Override
             public boolean canDestroyBlock(Explosion explosion, BlockView blockView, BlockPos pos, BlockState state, float power) {
                 return !indestructibleCondition.test(new CachedBlockPosition(world, pos, true));
+            }
+
+        };
+    }
+
+    @Nullable
+    public static ExplosionBehavior createExplosionBehavior(@Nullable Predicate<BlockConditionContext> indestructibleCondition, float resistance) {
+        return indestructibleCondition == null ? null : new ExplosionBehavior() {
+
+            @Override
+            public Optional<Float> getBlastResistance(Explosion explosion, BlockView world, BlockPos pos, BlockState blockState, FluidState fluidState) {
+
+                Optional<Float> defaultValue = super.getBlastResistance(explosion, world, pos, blockState, fluidState);
+                Optional<Float> newValue = indestructibleCondition.test(new BlockConditionContext((World) world, pos))
+                    ? Optional.of(resistance)
+                    : Optional.empty();
+
+                return defaultValue
+                    .flatMap(defVal -> newValue
+                        .map(newVal -> defVal > newVal ? defVal : newVal));
+
+            }
+
+            @Override
+            public boolean canDestroyBlock(Explosion explosion, BlockView world, BlockPos pos, BlockState state, float power) {
+                return !indestructibleCondition.test(new BlockConditionContext((World) world, pos));
             }
 
         };
@@ -122,7 +166,7 @@ public final class MiscUtil {
         }
 
         if ((entityNbt == null || entityNbt.isEmpty()) && entityToSpawn instanceof MobEntity mobToSpawn) {
-            mobToSpawn.initialize(serverWorld, serverWorld.getLocalDifficulty(BlockPos.ofFloored(pos)), SpawnReason.COMMAND, null, null);
+            mobToSpawn.initialize(serverWorld, serverWorld.getLocalDifficulty(BlockPos.ofFloored(pos)), SpawnReason.COMMAND, null);
         }
 
         return Optional.of(entityToSpawn);
@@ -149,7 +193,7 @@ public final class MiscUtil {
 
     }
 
-    public static BlockState getInWallBlockState(LivingEntity playerEntity) {
+    public static BlockState getInWallBlockState(Entity playerEntity) {
         BlockPos.Mutable mutable = new BlockPos.Mutable();
 
         for(int i = 0; i < 8; ++i) {
@@ -186,30 +230,271 @@ public final class MiscUtil {
         return a.and(b);
     }
 
-    public static DamageSource createDamageSource(DamageSources damageSources,
-                                                  @Nullable DamageSourceDescription damageSourceDescription,
-                                                  @Nullable RegistryKey<DamageType> damageType) {
-        if(damageSourceDescription == null && damageType == null) {
-            throw new JsonSyntaxException("Either a legacy damage source or an ID of a damage type must be specified");
+    public static boolean allPresent(SerializableData.Instance data, String... fieldNames) {
+
+        Set<String> fieldsToEvaluate = fieldNames.length > 0
+            ? new ObjectOpenHashSet<>(fieldNames)
+            : data.serializableData().getFieldNames();
+
+        for (String field : fieldsToEvaluate) {
+
+            if (!data.isPresent(field)) {
+                return false;
+            }
+
         }
-        return damageSourceDescription == null ? damageSources.create(damageType) : damageSourceDescription.create(damageSources);
+
+        return true;
+
     }
 
-    public static DamageSource createDamageSource(DamageSources damageSources,
-                                                  @Nullable DamageSourceDescription damageSourceDescription,
-                                                  @Nullable RegistryKey<DamageType> damageType, Entity attacker) {
-        if(damageSourceDescription == null && damageType == null) {
-            throw new JsonSyntaxException("Either a legacy damage source or an ID of a damage type must be specified");
-        }
-        return damageSourceDescription == null ? damageSources.create(damageType, attacker) : damageSourceDescription.create(damageSources, attacker);
+    public static Function<SerializableData.Instance, DataResult<SerializableData.Instance>> validateAllFieldsPresent(String... fields) {
+        return data -> {
+
+            if (allPresent(data, fields)) {
+                return DataResult.success(data);
+            }
+
+            else {
+
+                StringBuilder message = new StringBuilder(fields.length > 1 ? "All of " : "The ");
+                String separator = "";
+
+                for (int i = 0; i < fields.length; i++) {
+
+                    String field = fields[i];
+                    message
+                        .append(separator)
+                        .append("'").append(field).append("'");
+
+                    separator = i == fields.length - 2
+                        ? ", and "
+                        : ", ";
+
+                }
+
+                message
+                    .append(" field").append(fields.length > 1 ? "s" : "")
+                    .append(" must be defined!");
+
+                return DataResult.error(message::toString);
+
+            }
+
+        };
     }
 
-    public static DamageSource createDamageSource(DamageSources damageSources,
-                                                  @Nullable DamageSourceDescription damageSourceDescription,
-                                                  @Nullable RegistryKey<DamageType> damageType, Entity source, Entity attacker) {
-        if(damageSourceDescription == null && damageType == null) {
-            throw new JsonSyntaxException("Either a legacy damage source or an ID of a damage type must be specified");
+    public static boolean anyPresent(SerializableData.Instance data, String... fieldNames) {
+
+        Set<String> fieldsToEvaluate = fieldNames.length > 0
+            ? new ObjectOpenHashSet<>(fieldNames)
+            : data.serializableData().getFieldNames();
+
+        for (String field : fieldsToEvaluate) {
+
+            if (data.isPresent(field)) {
+                return true;
+            }
+
         }
-        return damageSourceDescription == null ? damageSources.create(damageType, source, attacker) : damageSourceDescription.create(damageSources, source, attacker);
+
+        return false;
+
     }
+
+    public static Function<SerializableData.Instance, DataResult<SerializableData.Instance>> validateAnyFieldsPresent(String... fields) {
+        return data -> {
+
+            if (anyPresent(data, fields)) {
+                return DataResult.success(data);
+            }
+
+            else {
+
+                StringBuilder message = new StringBuilder(fields.length > 1 ? "Any of the " : "The ");
+                String separator = "";
+
+                for (int i = 0; i < fields.length; i++) {
+
+                    String field = fields[i];
+                    message
+                        .append(separator)
+                        .append("'").append(field).append("'");
+
+                    separator = i == fields.length - 2
+                        ? ", and "
+                        : ", ";
+
+                }
+
+                message
+                    .append(" field").append(fields.length > 1 ? "s" : "")
+                    .append(" must be defined!");
+
+                return DataResult.error(message::toString);
+
+            }
+
+        };
+    }
+
+    public static OptionalInt getSpaceInInventory(PlayerEntity player, ItemStack stack) {
+        return getSpaceInInventory(player.getInventory(), stack);
+    }
+
+    public static OptionalInt getSpaceInInventory(PlayerInventory playerInventory, ItemStack stack) {
+
+        int slot = playerInventory.getOccupiedSlotWithRoomForStack(stack);
+        if (slot == -1) {
+            slot = playerInventory.getEmptySlot();
+        }
+
+        return slot == -1
+            ? OptionalInt.empty()
+            : OptionalInt.of(slot);
+
+    }
+
+    public static boolean hasSpaceInInventory(PlayerEntity player, ItemStack stack) {
+        return getSpaceInInventory(player, stack).isPresent();
+    }
+
+    public static boolean hasSpaceInInventory(PlayerInventory playerInventory, ItemStack stack) {
+        return getSpaceInInventory(playerInventory, stack).isPresent();
+    }
+
+    public static <E, C extends Collection<E>> BinaryOperator<C> mergeCollections() {
+        return (coll1, coll2) -> {
+            coll1.addAll(coll2);
+            return coll1;
+        };
+    }
+
+    @Nullable
+    public static <T> List<T> singletonListOrNull(@Nullable T value) {
+        return mapOr(value, List::of, () -> null);
+    }
+
+    public static <T> List<T> singletonListOrEmpty(@Nullable T value) {
+        return mapOr(value, List::of, List::of);
+    }
+
+    public static <T, U> U mapOr(@Nullable T value, Function<T, U> mapper, Supplier<U> defaultValue) {
+        return Optional.ofNullable(value)
+            .map(mapper)
+            .orElseGet(defaultValue);
+    }
+
+    public static IntSet toSlotIdSet(Collection<SlotRange> slotRanges) {
+
+        IntSet slotIdSet = new IntOpenHashSet();
+        for (SlotRange slotRange : slotRanges) {
+            slotIdSet.addAll(slotRange.getSlotIds());
+        }
+
+        return slotIdSet;
+
+    }
+
+    public static Vec3d getPoseDependentEyePos(Entity entity) {
+        return new Vec3d(entity.getX(), entity.getY() + entity.getEyeHeight(entity.getPose()), entity.getZ());
+    }
+
+    public static double getAttributeValueOrElse(Entity entity, RegistryEntry<EntityAttribute> attribute, double defaultValue) {
+
+        if (entity instanceof LivingEntity livingEntity && livingEntity.getAttributes().hasAttribute(attribute)) {
+            return livingEntity.getAttributeValue(attribute);
+        }
+
+        else {
+            return defaultValue;
+        }
+
+    }
+
+    public static <CX extends ConditionContext, CC extends Condition<CX, CT>, CT extends ConditionType<CX, CC>> DataResult<CT> validateConditionType(CT conditionType, Function<CT, DataResult<CT>> validator) {
+
+        if (conditionType instanceof MultiMetaConditionType<?, ?> multi) {
+
+            for (var innerCondition : multi.conditions()) {
+
+                CT innerConditionType = (CT) innerCondition.getType();
+                DataResult<CT> result = validateConditionType(innerConditionType, validator);
+
+                if (result.isError()) {
+                    return result;
+                }
+
+            }
+
+            return DataResult.success(conditionType);
+
+        }
+
+        else {
+            return validator.apply(conditionType);
+        }
+
+    }
+
+    public static int getInventoryProperIndex(EquipmentSlot slot) {
+
+        for (var slotRange : SlotRangesAccessor.getSlotRanges()) {
+
+            String slotName = slotRange.asString();
+
+            if (slotName.contains(slot.getName())) {
+                return switch (slot.getType()) {
+                    case HAND ->
+                        slot.getOffsetEntitySlotId(98);
+                    case HUMANOID_ARMOR ->
+                        slot.getOffsetEntitySlotId(100);
+                    case ANIMAL_ARMOR ->
+                        slot.getOffsetEntitySlotId(105);
+                };
+            }
+
+        }
+
+        return -1;
+
+    }
+
+    public static Collection<ServerPlayerEntity> getTrackingSafely(Entity entity) {
+
+        if (entity == null || entity.getWorld().isClient()) {
+            return Collections.emptySet();
+        }
+
+        ImmutableSet.Builder<ServerPlayerEntity> builder = ImmutableSet.builder();
+        builder.addAll(PlayerLookup.tracking(entity));
+
+        if (entity instanceof ServerPlayerEntity self) {
+            builder.add(self);
+        }
+
+        return builder.build();
+
+    }
+
+    public static void sendToTrackers(Entity target, CustomPayload payload) {
+
+        for (var recipient : getTrackingSafely(target)) {
+
+            if (ServerPlayNetworking.canSend(recipient, payload.getId())) {
+                ServerPlayNetworking.send(recipient, payload);
+            }
+
+        }
+
+    }
+
+    public static void sendToTrackers(Entity target, Packet<?> packet) {
+
+        for (var recipient : getTrackingSafely(target)) {
+            recipient.networkHandler.sendPacket(packet);
+        }
+
+    }
+
 }

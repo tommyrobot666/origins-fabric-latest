@@ -1,4 +1,4 @@
 {
-  "type": "apoli:phasing",
-  "render_type": "remove_blocks"
+	"type": "apoli:phasing",
+	"render_type": "remove_blocks"
 }

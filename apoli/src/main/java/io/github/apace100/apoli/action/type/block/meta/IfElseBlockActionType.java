@@ -1,0 +1,53 @@
+package io.github.apace100.apoli.action.type.block.meta;
+
+import io.github.apace100.apoli.action.ActionConfiguration;
+import io.github.apace100.apoli.action.BlockAction;
+import io.github.apace100.apoli.action.context.BlockActionContext;
+import io.github.apace100.apoli.action.type.BlockActionType;
+import io.github.apace100.apoli.action.type.BlockActionTypes;
+import io.github.apace100.apoli.action.type.meta.IfElseMetaActionType;
+import io.github.apace100.apoli.condition.BlockCondition;
+import io.github.apace100.apoli.condition.context.BlockConditionContext;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Optional;
+
+public class IfElseBlockActionType extends BlockActionType implements IfElseMetaActionType<BlockActionContext, BlockConditionContext, BlockAction, BlockCondition> {
+
+	private final BlockCondition condition;
+
+	private final BlockAction ifAction;
+	private final Optional<BlockAction> elseAction;
+
+	public IfElseBlockActionType(BlockCondition condition, BlockAction ifAction, Optional<BlockAction> elseAction) {
+		this.condition = condition;
+		this.ifAction = ifAction;
+		this.elseAction = elseAction;
+	}
+
+	@Override
+	public void accept(BlockActionContext context) {
+		this.executeAction(context);
+	}
+
+	@Override
+	public @NotNull ActionConfiguration<?> getConfig() {
+		return BlockActionTypes.IF_ELSE;
+	}
+
+	@Override
+	public BlockCondition condition() {
+		return condition;
+	}
+
+	@Override
+	public BlockAction ifAction() {
+		return ifAction;
+	}
+
+	@Override
+	public Optional<BlockAction> elseAction() {
+		return elseAction;
+	}
+
+}

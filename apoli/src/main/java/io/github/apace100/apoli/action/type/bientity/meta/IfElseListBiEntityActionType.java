@@ -1,0 +1,38 @@
+package io.github.apace100.apoli.action.type.bientity.meta;
+
+import io.github.apace100.apoli.action.ActionConfiguration;
+import io.github.apace100.apoli.action.BiEntityAction;
+import io.github.apace100.apoli.action.context.BiEntityActionContext;
+import io.github.apace100.apoli.action.type.BiEntityActionType;
+import io.github.apace100.apoli.action.type.BiEntityActionTypes;
+import io.github.apace100.apoli.action.type.meta.IfElseListMetaActionType;
+import io.github.apace100.apoli.condition.BiEntityCondition;
+import io.github.apace100.apoli.condition.context.BiEntityConditionContext;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.List;
+
+public class IfElseListBiEntityActionType extends BiEntityActionType implements IfElseListMetaActionType<BiEntityActionContext, BiEntityConditionContext, BiEntityAction, BiEntityCondition> {
+
+	private final List<ConditionedAction<BiEntityAction, BiEntityCondition>> conditionedActions;
+
+	public IfElseListBiEntityActionType(List<ConditionedAction<BiEntityAction, BiEntityCondition>> conditionedActions) {
+		this.conditionedActions = conditionedActions;
+	}
+
+	@Override
+	public void accept(BiEntityActionContext context) {
+		this.executeActions(context);
+	}
+
+	@Override
+	public @NotNull ActionConfiguration<?> getConfig() {
+		return BiEntityActionTypes.IF_ELSE_LIST;
+	}
+
+	@Override
+	public List<ConditionedAction<BiEntityAction, BiEntityCondition>> conditionedActions() {
+		return conditionedActions;
+	}
+
+}

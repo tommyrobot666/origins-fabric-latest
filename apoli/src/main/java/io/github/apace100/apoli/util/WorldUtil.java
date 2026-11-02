@@ -1,6 +1,5 @@
 package io.github.apace100.apoli.util;
 
-import io.github.apace100.apoli.Apoli;
 import io.github.apace100.apoli.access.BlockCollisionSpliteratorAccess;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.BlockPos;

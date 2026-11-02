@@ -1,0 +1,42 @@
+package io.github.apace100.apoli.condition.type.entity;
+
+import io.github.apace100.apoli.condition.ConditionConfiguration;
+import io.github.apace100.apoli.condition.context.EntityConditionContext;
+import io.github.apace100.apoli.condition.type.EntityConditionType;
+import io.github.apace100.apoli.condition.type.EntityConditionTypes;
+import io.github.apace100.apoli.data.TypedDataObjectFactory;
+import io.github.apace100.calio.data.SerializableData;
+import io.github.apace100.calio.data.SerializableDataTypes;
+import net.minecraft.fluid.Fluid;
+import net.minecraft.registry.tag.TagKey;
+import org.jetbrains.annotations.NotNull;
+
+public class SubmergedInEntityConditionType extends EntityConditionType {
+
+    public static final TypedDataObjectFactory<SubmergedInEntityConditionType> DATA_FACTORY = TypedDataObjectFactory.simple(
+        new SerializableData()
+            .add("fluid", SerializableDataTypes.FLUID_TAG),
+        data -> new SubmergedInEntityConditionType(
+            data.get("fluid")
+        ),
+        (conditionType, serializableData) -> serializableData.instance()
+            .set("fluid", conditionType.fluid)
+    );
+
+    private final TagKey<Fluid> fluid;
+
+    public SubmergedInEntityConditionType(TagKey<Fluid> fluid) {
+        this.fluid = fluid;
+    }
+
+    @Override
+    public boolean test(EntityConditionContext context) {
+        return context.entity().isSubmergedIn(fluid);
+    }
+
+    @Override
+    public @NotNull ConditionConfiguration<?> getConfig() {
+        return EntityConditionTypes.SUBMERGED_IN;
+    }
+
+}

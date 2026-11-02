@@ -1,8 +1,8 @@
 {
-  "entity_types": [
-    "minecraft:sheep"
-  ],
-  "powers": [
-    "apoli:woolless"
-  ]
+	"entity_types": [
+		"minecraft:sheep"
+	],
+	"powers": [
+		"apoli:woolless"
+	]
 }

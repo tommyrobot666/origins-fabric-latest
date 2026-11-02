@@ -1,0 +1,38 @@
+package io.github.apace100.apoli.action.type.item.meta;
+
+import io.github.apace100.apoli.action.ActionConfiguration;
+import io.github.apace100.apoli.action.ItemAction;
+import io.github.apace100.apoli.action.context.ItemActionContext;
+import io.github.apace100.apoli.action.type.ItemActionType;
+import io.github.apace100.apoli.action.type.ItemActionTypes;
+import io.github.apace100.apoli.action.type.meta.IfElseListMetaActionType;
+import io.github.apace100.apoli.condition.ItemCondition;
+import io.github.apace100.apoli.condition.context.ItemConditionContext;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.List;
+
+public class IfElseListItemActionType extends ItemActionType implements IfElseListMetaActionType<ItemActionContext, ItemConditionContext, ItemAction, ItemCondition> {
+
+	private final List<ConditionedAction<ItemAction, ItemCondition>> conditionedActions;
+
+	public IfElseListItemActionType(List<ConditionedAction<ItemAction, ItemCondition>> conditionedActions) {
+		this.conditionedActions = conditionedActions;
+	}
+
+	@Override
+	public void accept(ItemActionContext context) {
+		this.executeActions(context);
+	}
+
+	@Override
+	public @NotNull ActionConfiguration<?> getConfig() {
+		return ItemActionTypes.IF_ELSE_LIST;
+	}
+
+	@Override
+	public List<ConditionedAction<ItemAction, ItemCondition>> conditionedActions() {
+		return conditionedActions;
+	}
+
+}

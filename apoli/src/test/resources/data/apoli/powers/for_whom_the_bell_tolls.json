@@ -6,12 +6,12 @@
 			"type": "apoli:apply_effect",
 			"effects": [
 				{
-					"effect": "minecraft:speed",
+					"id": "minecraft:speed",
 					"duration": 100,
 					"amplifier": 1
 				},
 				{
-					"effect": "minecraft:jump_boost",
+					"id": "minecraft:jump_boost",
 					"duration": 100,
 					"amplifier": 0
 				}

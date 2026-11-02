@@ -6,9 +6,11 @@ plugins {
 version = project.mod_version
 group = project.maven_group
 
-//base {
-//	archivesName = project.archives_base_name
-//}
+def ENV = System.getenv()
+
+base {
+	archivesName = project.archives_base_name
+}
 
 repositories {
 	mavenLocal()
@@ -36,8 +38,8 @@ repositories {
 		url = 'https://maven.ladysnake.org/releases'
 	}
 	maven {
-		name = "JitPack"
-		url = 'https://jitpack.io'
+		name = 'Ladysnake Mods (snapshots)'
+		url = 'https://maven.ladysnake.org/snapshots'
 	}
 	maven {
 		url = 'https://maven.cafeteria.dev'
@@ -57,10 +59,13 @@ repositories {
 	maven {
 		url "https://maven.terraformersmc.com/"
 	}
+	maven {
+		url "https://maven.ryanliptak.com/"
+	}
 }
 
 loom {
-//	accessWidenerPath = file("src/main/resources/apoli.accesswidener")
+	accessWidenerPath = file("src/main/resources/apoli.accesswidener")
 	mods {
 		register("apoli") {
 			sourceSet(sourceSets.main)
@@ -84,6 +89,7 @@ loom {
 dependencies {
 
 	implementation 'com.demonwav.mcdev:annotations:1.0'
+	include(implementation(annotationProcessor("io.github.llamalad7:mixinextras-fabric:0.4.0")))
 
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
@@ -92,44 +98,44 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-	api("dev.onyxstudios.cardinal-components-api:cardinal-components-base:${project.cca_version}") {
+	//	Cardinal Components
+	include(api("org.ladysnake.cardinal-components-api:cardinal-components-base:${project.cca_version}") {
 		exclude(group: "net.fabricmc.fabric-api")
-	}
-	include "dev.onyxstudios.cardinal-components-api:cardinal-components-base:${project.cca_version}"
-
-	api("dev.onyxstudios.cardinal-components-api:cardinal-components-entity:${project.cca_version}") {
+	})
+	include(api("org.ladysnake.cardinal-components-api:cardinal-components-entity:${project.cca_version}") {
 		exclude(group: "net.fabricmc.fabric-api")
-	}
-	include "dev.onyxstudios.cardinal-components-api:cardinal-components-entity:${project.cca_version}"
+	})
 
-	api "io.github.ladysnake:PlayerAbilityLib:${pal_version}"
-	include "io.github.ladysnake:PlayerAbilityLib:${pal_version}"
+	//	PlayerAbilityLib
+	include(api("io.github.ladysnake:PlayerAbilityLib:${project.pal_version}"))
+	
+	//	Calio
+//	include(modApi("io.github.apace100:calio:${project.calio_version}"))
 
-//	api "com.github.apace100:calio:${project.calio_version}"
-//	include "com.github.apace100:calio:${project.calio_version}"
-
-	compileOnlyApi "com.jamieswhiteshirt:reach-entity-attributes:${rea_version}"
-
-	api("me.shedaniel.cloth:cloth-config-fabric:${project.clothconfig_version}") {
+	//	Cloth Config
+	include(api("me.shedaniel.cloth:cloth-config-fabric:${project.clothconfig_version}") {
 		exclude(group: "net.fabricmc.fabric-api")
+	})
+
+	//	Modmenu
+	include(implementation("com.terraformersmc:modmenu:${project.modmenu_version}"))
+
+	//	AdditionalEntityAttributes
+	include(api("maven.modrinth:additionalentityattributes:${project.additionalentityattributes_version}"))
+
+	//	Appleskin
+	compileOnly("squeek.appleskin:appleskin-fabric:${appleskin_version}:api") {
+		transitive = false
 	}
-	include "me.shedaniel.cloth:cloth-config-fabric:${project.clothconfig_version}"
-
-	implementation "com.terraformersmc:modmenu:${project.modmenu_version}"
-
-	api "maven.modrinth:additionalentityattributes:${project.additionalentityattributes_version}"
-	include "maven.modrinth:additionalentityattributes:${project.additionalentityattributes_version}"
-//	api "com.github.eggohito:AdditionalEntityAttributes:${project.aea_version}"
-//	include "com.github.eggohito:AdditionalEntityAttributes:${project.aea_version}"
+	compileOnly "squeek.appleskin:appleskin-fabric:${appleskin_version}"
 
 }
 
 processResources {
-	def version = project.version
-	inputs.property "version", version
+	inputs.property "version", project.version
 
 	filesMatching("fabric.mod.json") {
-		expand "version": version
+		expand "version": project.version
 	}
 }
 
@@ -166,16 +172,19 @@ publishing {
 
 	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
 	repositories {
-		// uncomment to publish to the local maven
-//		mavenLocal()
-//		if (ENV.MAVEN_URL && ENV.MAVEN_USERNAME && ENV.MAVEN_PASSWORD) {
-//			maven {
-//				url = ENV.MAVEN_URL
-//				credentials {
-//					username = ENV.MAVEN_USERNAME
-//					password = ENV.MAVEN_PASSWORD
-//				}
-//			}
-//		}
+		// Add repositories to publish to here.
+		// Notice: This block does NOT have the same function as the block in the top level.
+		// The repositories here will be used for publishing your artifact, not for
+		// retrieving dependencies.
+		mavenLocal()
+		if (ENV.MAVEN_URL && ENV.MAVEN_USERNAME && ENV.MAVEN_PASSWORD) {
+			maven {
+				url = ENV.MAVEN_URL
+				credentials {
+					username = ENV.MAVEN_USERNAME
+					password = ENV.MAVEN_PASSWORD
+				}
+			}
+		}
 	}
 }

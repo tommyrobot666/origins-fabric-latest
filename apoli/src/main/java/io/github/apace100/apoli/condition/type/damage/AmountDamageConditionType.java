@@ -1,0 +1,47 @@
+package io.github.apace100.apoli.condition.type.damage;
+
+import io.github.apace100.apoli.condition.ConditionConfiguration;
+import io.github.apace100.apoli.condition.context.DamageConditionContext;
+import io.github.apace100.apoli.condition.type.DamageConditionType;
+import io.github.apace100.apoli.condition.type.DamageConditionTypes;
+import io.github.apace100.apoli.data.ApoliDataTypes;
+import io.github.apace100.apoli.data.TypedDataObjectFactory;
+import io.github.apace100.apoli.util.Comparison;
+import io.github.apace100.calio.data.SerializableData;
+import io.github.apace100.calio.data.SerializableDataTypes;
+import org.jetbrains.annotations.NotNull;
+
+public class AmountDamageConditionType extends DamageConditionType {
+
+    public static final TypedDataObjectFactory<AmountDamageConditionType> DATA_FACTORY = TypedDataObjectFactory.simple(
+        new SerializableData()
+            .add("comparison", ApoliDataTypes.COMPARISON)
+            .add("compare_to", SerializableDataTypes.FLOAT),
+        data -> new AmountDamageConditionType(
+            data.get("comparison"),
+            data.get("compare_to")
+        ),
+        (conditionType, serializableData) -> serializableData.instance()
+            .set("comparison", conditionType.comparison)
+            .set("compare_to", conditionType.compareTo)
+    );
+
+    private final Comparison comparison;
+    private final float compareTo;
+
+    public AmountDamageConditionType(Comparison comparison, float compareTo) {
+        this.comparison = comparison;
+        this.compareTo = compareTo;
+    }
+
+    @Override
+    public boolean test(DamageConditionContext context) {
+        return comparison.compare(context.amount(), compareTo);
+    }
+
+    @Override
+    public @NotNull ConditionConfiguration<?> getConfig() {
+        return DamageConditionTypes.AMOUNT;
+    }
+
+}

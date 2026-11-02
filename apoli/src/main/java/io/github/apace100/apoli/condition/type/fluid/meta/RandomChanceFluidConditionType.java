@@ -1,0 +1,33 @@
+package io.github.apace100.apoli.condition.type.fluid.meta;
+
+import io.github.apace100.apoli.condition.ConditionConfiguration;
+import io.github.apace100.apoli.condition.context.FluidConditionContext;
+import io.github.apace100.apoli.condition.type.FluidConditionType;
+import io.github.apace100.apoli.condition.type.FluidConditionTypes;
+import io.github.apace100.apoli.condition.type.meta.RandomChanceMetaConditionType;
+import org.jetbrains.annotations.NotNull;
+
+public class RandomChanceFluidConditionType extends FluidConditionType implements RandomChanceMetaConditionType {
+
+	private final float chance;
+
+	public RandomChanceFluidConditionType(float chance) {
+		this.chance = chance;
+	}
+
+	@Override
+	public boolean test(FluidConditionContext context) {
+		return testCondition();
+	}
+
+	@Override
+	public @NotNull ConditionConfiguration<?> getConfig() {
+		return FluidConditionTypes.RANDOM_CHANCE;
+	}
+
+	@Override
+	public float chance() {
+		return chance;
+	}
+
+}

@@ -1,19 +1,23 @@
 package io.github.apace100.apoli.command;
 
-import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.tree.CommandNode;
+import io.github.apace100.apoli.command.argument.PowerArgumentType;
+import io.github.apace100.apoli.command.argument.PowerHolderArgumentType;
+import io.github.apace100.apoli.command.argument.PowerOperationArgumentType;
+import io.github.apace100.apoli.command.argument.suggestion.PowerSuggestionProvider;
 import io.github.apace100.apoli.component.PowerHolderComponent;
-import io.github.apace100.apoli.power.CooldownPower;
 import io.github.apace100.apoli.power.Power;
-import io.github.apace100.apoli.power.PowerType;
-import io.github.apace100.apoli.power.VariableIntPower;
+import io.github.apace100.apoli.power.type.PowerType;
+import io.github.apace100.apoli.util.PowerUtil;
 import net.minecraft.command.argument.ScoreHolderArgumentType;
 import net.minecraft.command.argument.ScoreboardObjectiveArgumentType;
-import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.Entity;
+import net.minecraft.scoreboard.ScoreAccess;
+import net.minecraft.scoreboard.ScoreHolder;
 import net.minecraft.scoreboard.ScoreboardObjective;
-import net.minecraft.scoreboard.ScoreboardPlayerScore;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 
@@ -22,158 +26,203 @@ import static net.minecraft.server.command.CommandManager.literal;
 
 public class ResourceCommand {
 
-    public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
-        dispatcher.register(
-            literal("resource").requires(cs -> cs.hasPermissionLevel(2))
-                .then(literal("has")
-                    .then(argument("target", PowerHolderArgumentType.holder())
-                        .then(argument("power", PowerTypeArgumentType.power())
-                            .executes((command) -> resource(command, SubCommand.HAS))))
-                )
-                .then(literal("get")
-                    .then(argument("target", PowerHolderArgumentType.holder())
-                        .then(argument("power", PowerTypeArgumentType.power())
-                            .executes((command) -> resource(command, SubCommand.GET))))
-                )
-                .then(literal("set")
-                    .then(argument("target", PowerHolderArgumentType.holder())
-                        .then(argument("power", PowerTypeArgumentType.power())
-                            .then(argument("value", IntegerArgumentType.integer())
-                                .executes((command) -> resource(command, SubCommand.SET)))))
-                )
-                .then(literal("change")
-                    .then(argument("target", PowerHolderArgumentType.holder())
-                        .then(argument("power", PowerTypeArgumentType.power())
-                            .then(argument("value", IntegerArgumentType.integer())
-                                .executes((command) -> resource(command, SubCommand.CHANGE)))))
-                )
-                .then(literal("operation")
-                    .then(argument("target", PowerHolderArgumentType.holder())
-                        .then(argument("power", PowerTypeArgumentType.power())
-                            .then(argument("operation", PowerOperation.operation())
-                                .then(argument("entity", ScoreHolderArgumentType.scoreHolder())
-                                    .then(argument("objective", ScoreboardObjectiveArgumentType.scoreboardObjective())
-                                        .executes((command) -> resource(command, SubCommand.OPERATION)))))))
-                )
-        );
-    }
+    public static void register(CommandNode<ServerCommandSource> baseNode) {
 
-    public enum SubCommand {
-        HAS, GET, SET, CHANGE, OPERATION
-    }
+        //  The main node of the command
+        var resourceNode = literal("resource")
+            .requires(source -> source.hasPermissionLevel(2))
+            .build();
 
-    // This is a cleaner method than sticking it into every subcommand
-    private static int resource(CommandContext<ServerCommandSource> context, SubCommand subCommand) throws CommandSyntaxException {
+        //  Add the sub-nodes as children of the main node
+        resourceNode.addChild(HasNode.get());
+        resourceNode.addChild(GetNode.get());
+        resourceNode.addChild(SetNode.get());
+        resourceNode.addChild(ChangeNode.get());
+        resourceNode.addChild(OperationNode.get());
 
-        ServerCommandSource source = context.getSource();
-        LivingEntity target = PowerHolderArgumentType.getHolder(context, "target");
-        PowerHolderComponent component = PowerHolderComponent.KEY.get(target);
-
-        PowerType<?> powerType = PowerTypeArgumentType.getPower(context, "power");
-        Power power = component.getPower(powerType);
-
-        return switch (subCommand) {
-            case HAS -> {
-
-                if (isPowerInvalid(power)) {
-                    source.sendError(Text.translatable("commands.execute.conditional.fail"));
-                    yield 0;
-                }
-
-                source.sendFeedback(() -> Text.translatable("commands.execute.conditional.pass"), true);
-                yield  1;
-
-            }
-            case GET -> {
-
-                if (isPowerInvalid(power)) {
-                    source.sendError(Text.translatable("commands.scoreboard.players.get.null", powerType.getIdentifier(), target.getName().getString()));
-                    yield 0;
-                }
-
-                int value = getValue(power);
-                source.sendFeedback(() -> Text.translatable("commands.scoreboard.players.get.success", target.getName().getString(), value, powerType.getIdentifier()), true);
-
-                yield value;
-
-            }
-            case SET -> {
-
-                if (isPowerInvalid(power)) {
-                    source.sendError(Text.translatable("argument.scoreHolder.empty"));
-                    yield 0;
-                }
-
-                int value = IntegerArgumentType.getInteger(context, "value");
-                setValue(power, value);
-
-                PowerHolderComponent.syncPower(target, powerType);
-                source.sendFeedback(() -> Text.translatable("commands.scoreboard.players.set.success.single", powerType.getIdentifier(), target.getName().getString(), value), true);
-
-                yield value;
-
-            }
-            case CHANGE -> {
-
-                if (isPowerInvalid(power)) {
-                    source.sendError(Text.translatable("argument.scoreHolder.empty"));
-                    yield 0;
-                }
-
-                int value = IntegerArgumentType.getInteger(context, "value");
-                int total = getValue(power) + value;
-
-                setValue(power, total);
-                PowerHolderComponent.syncPower(target, powerType);
-
-                source.sendFeedback(() -> Text.translatable("commands.scoreboard.players.add.success.single", value, powerType.getIdentifier(), target.getName().getString(), total), true);
-                yield total;
-
-            }
-            case OPERATION -> {
-
-                if (isPowerInvalid(power)) {
-                    source.sendError(Text.translatable("argument.scoreHolder.empty"));
-                    yield 0;
-                }
-
-                String scoreHolder = ScoreHolderArgumentType.getScoreHolder(context, "entity");
-                ScoreboardObjective scoreboardObjective = ScoreboardObjectiveArgumentType.getObjective(context, "objective");
-
-                ScoreboardPlayerScore scoreboardPlayerScore = source.getServer().getScoreboard().getPlayerScore(scoreHolder, scoreboardObjective);
-                context.getArgument("operation", PowerOperation.Operation.class).apply(power, scoreboardPlayerScore);
-
-                int value = getValue(power);
-                PowerHolderComponent.syncPower(target, powerType);
-
-                source.sendFeedback(() -> Text.translatable("commands.scoreboard.players.operation.success.single", powerType.getIdentifier(), target.getName().getString(), value), true);
-                yield value;
-
-            }
-        };
+        //  Add the main node as a child of the base node
+        baseNode.addChild(resourceNode);
 
     }
 
-    private static int getValue(Power power) {
-        if (power instanceof VariableIntPower vip) {
-            return vip.getValue();
-        } else if (power instanceof CooldownPower cp) {
-            return cp.getRemainingTicks();
-        } else {
-            return 0;
+    public static class HasNode {
+
+        public static CommandNode<ServerCommandSource> get() {
+            return literal("has")
+                .then(argument("target", PowerHolderArgumentType.holder())
+                    .then(argument("resource", PowerArgumentType.resource())
+                        .executes(HasNode::execute))).build();
         }
-    }
 
-    private static void setValue(Power power, int newValue) {
-        if (power instanceof VariableIntPower vip) {
-            vip.setValue(newValue);
-        } else if (power instanceof CooldownPower cp) {
-            cp.setCooldown(newValue);
+        public static int execute(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+
+            Entity target = PowerHolderArgumentType.getHolder(context, "target");
+            Power power = PowerArgumentType.getResource(context, "resource");
+
+            ServerCommandSource commandSource = context.getSource();
+            PowerType powerType = PowerUtil.getOptionalPowerType(power, target).orElseThrow(() -> PowerArgumentType.POWER_NOT_GRANTED.create(target.getName(), power.getId().toString()));
+
+            if (powerType != null) {
+                commandSource.sendFeedback(() -> Text.translatable("commands.execute.conditional.pass"), false);
+                return 1;
+            }
+
+            else {
+                commandSource.sendError(Text.translatable("commands.execute.conditional.fail"));
+                return 0;
+            }
+
         }
+
     }
 
-    private static boolean isPowerInvalid(Power power) {
-        return !(power instanceof VariableIntPower) && !(power instanceof CooldownPower);
+    public static class GetNode {
+
+        public static CommandNode<ServerCommandSource> get() {
+            return literal("get")
+                .then(argument("target", PowerHolderArgumentType.holder())
+                    .then(argument("resource", PowerArgumentType.resource())
+                        .suggests(PowerSuggestionProvider.resourcesFromEntity("target"))
+                        .executes(GetNode::execute)
+                        .then(literal("")))).build();
+        }
+
+        public static int execute(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+
+            Entity target = PowerHolderArgumentType.getHolder(context, "target");
+            Power power = PowerArgumentType.getResource(context, "resource");
+
+            ServerCommandSource commandSource = context.getSource();
+            PowerType powerType = PowerUtil.getOptionalPowerType(power, target).orElseThrow(() -> PowerArgumentType.POWER_NOT_GRANTED.create(target.getName(), power.getId().toString()));
+
+            if (powerType != null) {
+
+                int value = PowerUtil.getResourceValue(powerType);
+                commandSource.sendFeedback(() -> Text.translatable("commands.scoreboard.players.get.success", target.getName(), value, power.getId().toString()), false);
+
+                return value;
+
+            }
+
+            else {
+                commandSource.sendError(Text.translatable("commands.scoreboard.players.get.null", power.getId().toString(), target.getName()));
+                return 0;
+            }
+
+        }
+
+    }
+
+    public static class SetNode {
+
+        public static CommandNode<ServerCommandSource> get() {
+            return literal("set")
+                .then(argument("target", PowerHolderArgumentType.holder())
+                    .then(argument("resource", PowerArgumentType.resource())
+                        .suggests(PowerSuggestionProvider.resourcesFromEntity("target"))
+                        .then(argument("value", IntegerArgumentType.integer())
+                            .executes(SetNode::execute)))).build();
+        }
+
+        public static int execute(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+
+            Entity target = PowerHolderArgumentType.getHolder(context, "target");
+            Power power = PowerArgumentType.getResource(context, "resource");
+
+            int value = IntegerArgumentType.getInteger(context, "value");
+            int newValue;
+
+            ServerCommandSource commandSource = context.getSource();
+            PowerType powerType = PowerUtil.getOptionalPowerType(power, target).orElseThrow(() -> PowerArgumentType.POWER_NOT_GRANTED.create(target.getName(), power.getId().toString()));
+
+            if (PowerUtil.setResourceValue(powerType, value)) {
+                PowerHolderComponent.syncPower(target, power);
+            }
+
+            newValue = PowerUtil.getResourceValue(powerType);
+            commandSource.sendFeedback(() -> Text.translatable("commands.scoreboard.players.set.success.single", power.getId().toString(), target.getName(), newValue), true);
+
+            return newValue;
+
+        }
+
+    }
+
+    public static class ChangeNode {
+
+        public static CommandNode<ServerCommandSource> get() {
+            return literal("change")
+                .then(argument("target", PowerHolderArgumentType.holder())
+                    .then(argument("resource", PowerArgumentType.resource())
+                        .suggests(PowerSuggestionProvider.resourcesFromEntity("target"))
+                        .then(argument("value", IntegerArgumentType.integer())
+                            .executes(ChangeNode::execute)))).build();
+        }
+
+        public static int execute(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+
+            Entity target = PowerHolderArgumentType.getHolder(context, "target");
+            Power resource = PowerArgumentType.getResource(context, "resource");
+            
+            int value = IntegerArgumentType.getInteger(context, "value");
+            int newValue;
+            
+            ServerCommandSource commandSource = context.getSource();
+            PowerType powerType = PowerUtil.getOptionalPowerType(resource, target).orElseThrow(() -> PowerArgumentType.POWER_NOT_GRANTED.create(target.getName(), resource.getId().toString()));
+            
+            if (PowerUtil.changeResourceValue(powerType, value)) {
+                PowerHolderComponent.syncPower(target, resource);
+            }
+            
+            newValue = PowerUtil.getResourceValue(powerType);
+            commandSource.sendFeedback(() -> Text.translatable("commands.scoreboard.players.add.success.single", value, resource.getId().toString(), target.getName(), newValue), true);
+            
+            return newValue;
+
+        }
+
+    }
+
+    public static class OperationNode {
+
+        public static CommandNode<ServerCommandSource> get() {
+            return literal("operation")
+                .then(argument("target", PowerHolderArgumentType.holder())
+                    .then(argument("resource", PowerArgumentType.resource())
+                        .suggests(PowerSuggestionProvider.resourcesFromEntity("target"))
+                        .then(argument("operation", PowerOperationArgumentType.operation())
+                            .then(argument("source", ScoreHolderArgumentType.scoreHolder())
+                                .then(argument("objective", ScoreboardObjectiveArgumentType.scoreboardObjective())
+                                    .executes(OperationNode::execute)))))).build();
+        }
+
+        public static int execute(CommandContext<ServerCommandSource> context) throws CommandSyntaxException {
+
+            Entity target = PowerHolderArgumentType.getHolder(context, "target");
+            Power resource = PowerArgumentType.getResource(context, "resource");
+
+            PowerOperationArgumentType.Operation operation = PowerOperationArgumentType.getOperation(context, "operation");
+
+            ScoreHolder source = ScoreHolderArgumentType.getScoreHolder(context, "source");
+            ScoreboardObjective objective = ScoreboardObjectiveArgumentType.getObjective(context, "objective");
+
+            ServerCommandSource commandSource = context.getSource();
+            PowerType powerType = PowerUtil.getOptionalPowerType(resource, target).orElseThrow(() -> PowerArgumentType.POWER_NOT_GRANTED.create(target.getName(), resource.getId().toString()));
+
+            ScoreAccess scoreAccess = commandSource.getServer().getScoreboard().getOrCreateScore(source, objective);
+
+            boolean operated = operation.apply(powerType, scoreAccess);
+            int newValue = PowerUtil.getResourceValue(powerType);
+
+            if (operated) {
+                PowerHolderComponent.syncPower(target, resource);
+            }
+
+            commandSource.sendFeedback(() -> Text.translatable("commands.scoreboard.players.operation.success.single", resource.getId().toString(), target.getName(), newValue), true);
+            return newValue;
+
+        }
+
     }
 
 }

@@ -1,35 +1,53 @@
 package io.github.apace100.apoli.mixin;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.sugar.Local;
+import io.github.apace100.apoli.access.PowerCraftingInventory;
 import io.github.apace100.apoli.component.PowerHolderComponent;
-import io.github.apace100.apoli.power.ElytraFlightPower;
-import io.github.apace100.apoli.power.RestrictArmorPower;
+import io.github.apace100.apoli.power.type.ModifyCraftingPowerType;
+import io.github.apace100.apoli.power.type.RestrictArmorPowerType;
 import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.Inventory;
+import net.minecraft.inventory.CraftingInventory;
+import net.minecraft.inventory.RecipeInputInventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.slot.Slot;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.Slice;
 
-@Mixin(targets = "net/minecraft/screen/PlayerScreenHandler$1")
-public abstract class PlayerScreenHandlerMixin extends Slot {
+@Mixin(PlayerScreenHandler.class)
+public abstract class PlayerScreenHandlerMixin {
 
-    public PlayerScreenHandlerMixin(Inventory inventory, int index, int x, int y) {
-        super(inventory, index, x, y);
-    }
+    @Shadow
+    @Final
+    private RecipeInputInventory craftingInput;
 
-    @Inject(method = "Lnet/minecraft/screen/PlayerScreenHandler$1;canInsert(Lnet/minecraft/item/ItemStack;)Z", at = @At("HEAD"), cancellable = true)
-    private void preventArmorInsertion(ItemStack stack, CallbackInfoReturnable<Boolean> info) {
-        PlayerEntity player = ((PlayerInventory)inventory).player;
-        PowerHolderComponent component = PowerHolderComponent.KEY.get(player);
-        EquipmentSlot slot = MobEntity.getPreferredEquipmentSlot(stack);
-        if(component.getPowers(RestrictArmorPower.class).stream().anyMatch(rap -> !rap.canEquip(stack, slot))) {
-            info.setReturnValue(false);
+    @ModifyExpressionValue(method = "<init>", at = @At(value = "NEW", target = "(Lnet/minecraft/screen/ScreenHandler;II)Lnet/minecraft/inventory/CraftingInventory;"))
+    private CraftingInventory apoli$cachePlayerToCraftingInventory(CraftingInventory original, PlayerInventory playerInventory) {
+
+        if (original instanceof PowerCraftingInventory pci) {
+            pci.apoli$setPlayer(playerInventory.player);
         }
+
+        return original;
+
     }
+
+    @ModifyExpressionValue(method = "quickMove", at = @At(value = "INVOKE", target = "Lnet/minecraft/screen/slot/Slot;hasStack()Z", ordinal = 0), slice = @Slice(from = @At(value = "FIELD", target = "Lnet/minecraft/entity/EquipmentSlot$Type;HUMANOID_ARMOR:Lnet/minecraft/entity/EquipmentSlot$Type;")))
+    private boolean apoli$disallowQuickMovingRestrictedWearables(boolean original, PlayerEntity player, @Local(ordinal = 1) ItemStack stackToInsert, @Local EquipmentSlot slot) {
+        return original
+            || PowerHolderComponent.hasPowerType(player, RestrictArmorPowerType.class, p -> p.doesRestrict(stackToInsert, slot));
+    }
+
+    @ModifyVariable(method = "quickMove", at = @At(value = "INVOKE", target = "Lnet/minecraft/screen/PlayerScreenHandler;insertItem(Lnet/minecraft/item/ItemStack;IIZ)Z", ordinal = 0), ordinal = 1)
+    private ItemStack apoli$modifyResultStackOnQuickMove(ItemStack original, PlayerEntity player, int slotId, @Local Slot slot) {
+        return ModifyCraftingPowerType.executeAfterCraftingAction(player, craftingInput, slot, original);
+    }
+
 }

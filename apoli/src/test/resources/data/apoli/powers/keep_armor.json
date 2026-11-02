@@ -1,6 +1,9 @@
 {
-  "type": "apoli:keep_inventory",
-  "slots": [
-    39, 38, 37, 36
-  ]
+	"type": "apoli:keep_inventory",
+	"slots": [
+		39,
+		38,
+		37,
+		36
+	]
 }

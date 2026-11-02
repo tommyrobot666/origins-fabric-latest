@@ -12,6 +12,6 @@ public interface ItemEntityAccessor {
 
     @Nullable
     @Accessor
-    UUID getThrower();
+    UUID getThrowerUuid();
 
 }

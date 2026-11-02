@@ -1,64 +1,39 @@
 package io.github.apace100.apoli.registry;
 
 import io.github.apace100.apoli.Apoli;
-import io.github.apace100.apoli.power.factory.PowerFactory;
-import io.github.apace100.apoli.power.factory.action.ActionFactory;
-import io.github.apace100.apoli.power.factory.condition.ConditionFactory;
+import io.github.apace100.apoli.action.ActionConfiguration;
+import io.github.apace100.apoli.action.type.BiEntityActionType;
+import io.github.apace100.apoli.action.type.BlockActionType;
+import io.github.apace100.apoli.action.type.EntityActionType;
+import io.github.apace100.apoli.action.type.ItemActionType;
+import io.github.apace100.apoli.condition.ConditionConfiguration;
+import io.github.apace100.apoli.condition.type.*;
+import io.github.apace100.apoli.data.container.ContainerType;
+import io.github.apace100.apoli.power.PowerConfiguration;
+import io.github.apace100.apoli.power.type.PowerType;
 import io.github.apace100.apoli.util.modifier.IModifierOperation;
-import net.minecraft.block.pattern.CachedBlockPosition;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.inventory.StackReference;
-import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.util.Pair;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.World;
-import net.minecraft.world.biome.Biome;
-import org.apache.commons.lang3.tuple.Triple;
 
 public class ApoliRegistryKeys {
 
-    public static final RegistryKey<Registry<PowerFactory>> POWER_FACTORY;
+    public static final RegistryKey<Registry<PowerConfiguration<PowerType>>> POWER_TYPE = create("power_type");
 
-    public static final RegistryKey<Registry<ConditionFactory<Entity>>> ENTITY_CONDITION;
-    public static final RegistryKey<Registry<ConditionFactory<Pair<Entity, Entity>>>> BIENTITY_CONDITION;
-    public static final RegistryKey<Registry<ConditionFactory<Pair<World, ItemStack>>>> ITEM_CONDITION;
-    public static final RegistryKey<Registry<ConditionFactory<CachedBlockPosition>>> BLOCK_CONDITION;
-    public static final RegistryKey<Registry<ConditionFactory<Pair<DamageSource, Float>>>> DAMAGE_CONDITION;
-    public static final RegistryKey<Registry<ConditionFactory<FluidState>>> FLUID_CONDITION;
-    public static final RegistryKey<Registry<ConditionFactory<RegistryEntry<Biome>>>> BIOME_CONDITION;
+    public static final RegistryKey<Registry<ConditionConfiguration<BiEntityConditionType>>> BIENTITY_CONDITION_TYPE = create("bientity_condition_type");
+    public static final RegistryKey<Registry<ConditionConfiguration<BiomeConditionType>>> BIOME_CONDITION_TYPE = create("biome_condition_type");
+    public static final RegistryKey<Registry<ConditionConfiguration<BlockConditionType>>> BLOCK_CONDITION_TYPE = create("block_condition_type");
+    public static final RegistryKey<Registry<ConditionConfiguration<DamageConditionType>>> DAMAGE_CONDITION_TYPE = create("damage_condition_type");
+    public static final RegistryKey<Registry<ConditionConfiguration<EntityConditionType>>> ENTITY_CONDITION_TYPE = create("entity_condition_type");
+    public static final RegistryKey<Registry<ConditionConfiguration<FluidConditionType>>> FLUID_CONDITION_TYPE = create("fluid_condition_type");
+    public static final RegistryKey<Registry<ConditionConfiguration<ItemConditionType>>> ITEM_CONDITION_TYPE = create("item_condition_type");
 
-    public static final RegistryKey<Registry<ActionFactory<Entity>>> ENTITY_ACTION;
-    public static final RegistryKey<Registry<ActionFactory<Pair<World, StackReference>>>> ITEM_ACTION;
-    public static final RegistryKey<Registry<ActionFactory<Triple<World, BlockPos, Direction>>>> BLOCK_ACTION;
-    public static final RegistryKey<Registry<ActionFactory<Pair<Entity, Entity>>>> BIENTITY_ACTION;
-    public static final RegistryKey<Registry<IModifierOperation>> MODIFIER_OPERATION;
+    public static final RegistryKey<Registry<ActionConfiguration<BiEntityActionType>>> BIENTITY_ACTION_TYPE = create("bientity_action_type");
+    public static final RegistryKey<Registry<ActionConfiguration<BlockActionType>>> BLOCK_ACTION_TYPE = create("block_action_type");
+    public static final RegistryKey<Registry<ActionConfiguration<EntityActionType>>> ENTITY_ACTION_TYPE = create("entity_action_type");
+    public static final RegistryKey<Registry<ActionConfiguration<ItemActionType>>> ITEM_ACTION_TYPE = create("item_action_type");
 
-    static {
-
-        POWER_FACTORY = create("power_factory");
-
-        ENTITY_CONDITION = create("entity_condition");
-        BIENTITY_CONDITION = create("bientity_condition");
-        ITEM_CONDITION = create("item_condition");
-        BLOCK_CONDITION = create("block_condition");
-        DAMAGE_CONDITION = create("damage_condition");
-        FLUID_CONDITION = create("fluid_condition");
-        BIOME_CONDITION = create("biome_condition");
-
-        ENTITY_ACTION = create("entity_action");
-        ITEM_ACTION = create("item_action");
-        BLOCK_ACTION = create("block_action");
-        BIENTITY_ACTION = create("bientity_action");
-
-        MODIFIER_OPERATION = create("modifier_operation");
-
-    }
+    public static final RegistryKey<Registry<IModifierOperation>> MODIFIER_OPERATION = create("modifier_operation");
+    public static final RegistryKey<Registry<ContainerType>> CONTAINER_TYPE = create("container_type");
 
     private static <T> RegistryKey<Registry<T>> create(String path) {
         return RegistryKey.ofRegistry(Apoli.identifier(path));

@@ -1,0 +1,55 @@
+package io.github.apace100.apoli.condition.type.entity;
+
+import io.github.apace100.apoli.condition.ConditionConfiguration;
+import io.github.apace100.apoli.condition.context.EntityConditionContext;
+import io.github.apace100.apoli.condition.type.EntityConditionType;
+import io.github.apace100.apoli.condition.type.EntityConditionTypes;
+import io.github.apace100.apoli.data.ApoliDataTypes;
+import io.github.apace100.apoli.data.TypedDataObjectFactory;
+import io.github.apace100.apoli.util.Comparison;
+import io.github.apace100.calio.data.SerializableData;
+import io.github.apace100.calio.data.SerializableDataTypes;
+import net.minecraft.fluid.Fluid;
+import net.minecraft.registry.tag.TagKey;
+import org.jetbrains.annotations.NotNull;
+
+public class FluidHeightEntityConditionType extends EntityConditionType {
+
+    public static final TypedDataObjectFactory<FluidHeightEntityConditionType> DATA_FACTORY = TypedDataObjectFactory.simple(
+        new SerializableData()
+            .add("fluid", SerializableDataTypes.FLUID_TAG)
+            .add("comparison", ApoliDataTypes.COMPARISON)
+            .add("compare_to", SerializableDataTypes.DOUBLE),
+        data -> new FluidHeightEntityConditionType(
+            data.get("fluid"),
+            data.get("comparison"),
+            data.get("compare_to")
+        ),
+        (conditionType, serializableData) -> serializableData.instance()
+            .set("fluid", conditionType.fluidTag)
+            .set("comparison", conditionType.comparison)
+            .set("compare_to", conditionType.compareTo)
+    );
+
+    private final TagKey<Fluid> fluidTag;
+
+    private final Comparison comparison;
+    private final double compareTo;
+
+    public FluidHeightEntityConditionType(TagKey<Fluid> fluidTag, Comparison comparison, double compareTo) {
+        this.fluidTag = fluidTag;
+        this.comparison = comparison;
+        this.compareTo = compareTo;
+    }
+
+    @Override
+    public boolean test(EntityConditionContext context) {
+        return comparison.compare(context.entity().getFluidHeight(fluidTag), compareTo);
+    }
+
+    @Override
+    public @NotNull ConditionConfiguration<?> getConfig() {
+        return EntityConditionTypes.FLUID_HEIGHT;
+    }
+
+}
