@@ -24,16 +24,12 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.registry.DynamicRegistryManager;
-import net.minecraft.registry.RegistryOps;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.ResourceType;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.JsonHelper;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryOps;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.packs.PackType;
 import net.minecraft.util.Util;
-import net.minecraft.util.profiler.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -42,7 +38,7 @@ import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
-public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implements IdentifiableResourceReloadListener {
+public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implements IdResourceReloadListener {
 
     public static final Set<Identifier> DEPENDENCIES = Util.make(new ObjectOpenHashSet<>(), set -> set.add(OriginManager.ID));
     public static final Identifier ID = Origins.identifier("origin_layers");
@@ -56,7 +52,7 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
         .create();
 
     public OriginLayerManager() {
-        super(GSON, "origin_layers", ResourceType.SERVER_DATA);
+        super(GSON, "origin_layers", PackType.SERVER_DATA);
         ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.addPhaseOrdering(OriginManager.ID, ID);
         ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.register(ID, (player, joined) -> {
 
@@ -72,9 +68,9 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
         });
     }
 
-    private void updateData(ServerPlayerEntity player, boolean init) {
+    private void updateData(ServerPlayer player, boolean init) {
 
-        RegistryOps<JsonElement> jsonOps = player.getRegistryManager().getOps(JsonOps.INSTANCE);
+        RegistryOps<JsonElement> jsonOps = RegistryOps.create(JsonOps.INSTANCE,player.registryAccess());
         OriginComponent component = ModComponents.ORIGIN.get(player);
 
         int mismatches = 0;
@@ -151,7 +147,7 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
     }
 
     @Override
-    protected void apply(MultiJsonDataContainer prepared, ResourceManager manager, Profiler profiler) {
+    protected void apply(MultiJsonDataContainer prepared, ResourceManager manager, ProfilerFiller profiler) {
 
         Origins.LOGGER.info("Reading origin layers from data packs...");
 
@@ -377,7 +373,7 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
         LAYERS_BY_ID.trim();
     }
 
-    public static void send(ServerPlayerEntity player) {
+    public static void send(ServerPlayer player) {
 
         if (player.server.isRemote()) {
             ServerPlayNetworking.send(player, new SyncOriginLayersS2CPacket(LAYERS_BY_ID));

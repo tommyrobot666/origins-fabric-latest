@@ -16,9 +16,10 @@ import io.github.apace100.calio.util.*;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+import net.minecraft.core.Registry;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.random.Weighted;
 import net.minecraft.util.random.WeightedList;
 import org.apache.commons.lang3.EnumUtils;
@@ -50,7 +51,7 @@ public class SerializableDataType<T> {
     }
 
     public SerializableDataType(Codec<T> codec) {
-        this(codec, StreamCodecs.codec(codec).cast());
+        this(codec, ByteBufCodecs.fromCodec(codec).cast());
     }
 
     /**
@@ -324,7 +325,7 @@ public class SerializableDataType<T> {
 
     public static <T> SerializableDataType<T> registry(Registry<T> registry, String defaultNamespace, @Nullable IdentifierAlias aliases, BiFunction<Registry<T>, Identifier, String> exception) {
         return of(
-            new Codec<>() {
+            new Codec<T>() {
 
                 @Override
                 public <I> DataResult<Pair<T, I>> decode(DynamicOps<I> ops, I input) {
@@ -343,7 +344,7 @@ public class SerializableDataType<T> {
                 }
 
             },
-            StreamCodecs.registryValue(registry.getKey())
+            ByteBufCodecs.registryValue(registry.getKey())
         );
     }
 
@@ -447,7 +448,7 @@ public class SerializableDataType<T> {
     public static <K, V> SerializableDataType<Map<K, V>> map(SerializableDataType<K> keyDataType, SerializableDataType<V> valueDataType) {
         return new SerializableDataType<>(
             new UnboundedMapCodec<>(keyDataType.codec(), valueDataType.codec()),
-            StreamCodec.ofStatic(
+            StreamCodec.of(
                 (buf, map) -> {
 
                     buf.writeVarInt(map.size());
@@ -492,7 +493,7 @@ public class SerializableDataType<T> {
 
     public static <V> SerializableDataType<V> mapped(Supplier<BiMap<String, V>> acceptedValuesSupplier) {
         return new SerializableDataType<>(
-            new Codec<>() {
+            new Codec<V>() {
 
                 @Override
                 public <T> DataResult<Pair<V, T>> decode(DynamicOps<T> ops, T input) {
@@ -530,14 +531,14 @@ public class SerializableDataType<T> {
                 }
 
             },
-            StreamCodec.ofStatic(
+            StreamCodec.of(
                 (buf, value) -> {
 
                     BiMap<String, V> acceptedValues = acceptedValuesSupplier.get();
                     String key = acceptedValues.inverse().get(value);
 
                     if (key != null) {
-                        buf.writeString(key);
+                        buf.writeUtf(key);
                     }
 
                     else {
@@ -549,7 +550,7 @@ public class SerializableDataType<T> {
 
                     BiMap<String, V> acceptedValues = acceptedValuesSupplier.get();
 
-                    String key = buf.readString();
+                    String key = buf.readUtf();
                     V value = acceptedValues.get(key);
 
                     if (acceptedValues.containsKey(key)) {
@@ -583,7 +584,7 @@ public class SerializableDataType<T> {
 
     public static <T> SerializableDataType<TagKey<T>> tagKey(RegistryKey<? extends Registry<T>> registryRef) {
         return lazy(() -> new SerializableDataType<>(
-            new Codec<>() {
+            new Codec<T>() {
 
                 @Override
                 public <I> DataResult<Pair<TagKey<T>, I>> decode(DynamicOps<I> ops, I input) {
@@ -616,7 +617,7 @@ public class SerializableDataType<T> {
                 }
 
             },
-            StreamCodec.ofStatic(
+            StreamCodec.of(
                 (buf, value) -> buf.writeIdentifier(value.id()),
                 buf -> TagKey.of(registryRef, buf.readIdentifier())
             )
@@ -625,7 +626,7 @@ public class SerializableDataType<T> {
 
     public static <A> SerializableDataType<RegistryEntry<A>> registryEntry(Registry<A> registry) {
         return new SerializableDataType<>(
-			new Codec<>() {
+			new Codec<T>() {
 
 				@Override
 				public <T> DataResult<Pair<RegistryEntry<A>, T>> decode(DynamicOps<T> ops, T input) {
@@ -652,7 +653,7 @@ public class SerializableDataType<T> {
 				}
 
 			},
-            StreamCodecs.registryEntry(registry.getKey())
+            ByteBufCodecs.registryEntry(registry.getKey())
         );
     }
 
@@ -662,7 +663,7 @@ public class SerializableDataType<T> {
 
     public static <T> SerializableDataType<RegistryKey<T>> registryKey(RegistryKey<? extends Registry<T>> registryRef, Collection<RegistryKey<T>> exemptions) {
         return new SerializableDataType<>(
-            new Codec<>() {
+            new Codec<T>() {
 
                 @Override
                 public <I> DataResult<Pair<RegistryKey<T>, I>> decode(DynamicOps<I> ops, I input) {
@@ -695,7 +696,7 @@ public class SerializableDataType<T> {
                 }
 
             },
-            StreamCodec.ofStatic(
+            StreamCodec.of(
                 PacketByteBuf::writeRegistryKey,
                 buf -> buf.readRegistryKey(registryRef)
             )
@@ -721,7 +722,7 @@ public class SerializableDataType<T> {
     private static <E extends Enum<E>> SerializableDataType<E> enumValueInternal(Class<E> enumClass, Supplier<Map<String, E>> additionalMapSupplier) {
         IntFunction<E> ordinalToEnum = ValueLists.createIdToValueFunction((ToIntFunction<E>) Enum::ordinal, enumClass.getEnumConstants(), ValueLists.OutOfBoundsHandling.CLAMP);
         return new SerializableDataType<>(
-            new Codec<>() {
+            new Codec<T>() {
 
                 @Override
                 public <T> DataResult<Pair<E, T>> decode(DynamicOps<T> ops, T input) {
@@ -774,7 +775,7 @@ public class SerializableDataType<T> {
                 }
 
             },
-            StreamCodecs.indexed(ordinalToEnum, Enum::ordinal).cast()
+            ByteBufCodecs.indexed(ordinalToEnum, Enum::ordinal).cast()
         );
     }
 
@@ -872,7 +873,7 @@ public class SerializableDataType<T> {
 
     public static <E> SerializableDataType<TagLike<E>> tagLike(Registry<E> registry) {
         return lazy(() -> of(
-            new Codec<>() {
+            new Codec<T>() {
 
                 @Override
                 public <T> DataResult<Pair<TagLike<E>, T>> decode(DynamicOps<T> ops, T input) {
@@ -897,7 +898,7 @@ public class SerializableDataType<T> {
 
     public static <E> SerializableDataType<TagLike<E>> tagLike(RegistryKey<E> registryKey) {
         return lazy(() -> of(
-            new Codec<>() {
+            new Codec<T>() {
 
                 private final RegistryKey<? extends Registry<E>> registryRef = registryKey.getRegistryRef();
 

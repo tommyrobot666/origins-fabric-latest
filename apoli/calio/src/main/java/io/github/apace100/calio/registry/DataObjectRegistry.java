@@ -11,6 +11,9 @@ import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.util.profiling.ProfilerFiller;
 import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -64,7 +67,7 @@ public class DataObjectRegistry<T extends DataObject<T>> {
      * @return the resource reload listener which loads the data from data packs. This is not registered automatically, thus you need to
      *         register it, preferably in {@link net.fabricmc.fabric.api.resource.ResourceManagerHelper}
      */
-    public IdentifiableResourceReloadListener getLoader() {
+    public IdPreparableReloadListener getLoader() {
         return loader;
     }
 
@@ -176,8 +179,7 @@ public class DataObjectRegistry<T extends DataObject<T>> {
         }
         DataObjectFactory<T> factory;
         if(jsonObject.has(factoryFieldName)) {
-            String type = jsonObject.get(factoryFieldName).getAsString();
-//            String type = JsonHelper.getString(jsonObject, factoryFieldName);
+            String type = GsonHelper.getAsString(jsonObject, factoryFieldName);
             Identifier factoryId = null;
 
             factoryId = Identifier.tryParse(type);
@@ -306,7 +308,7 @@ public class DataObjectRegistry<T extends DataObject<T>> {
 
     }
 
-    private class Loader extends IdentifiableMultiJsonDataLoader implements IdentifiableResourceReloadListener {
+    private class Loader extends IdentifiableMultiJsonDataLoader implements IdPreparableReloadListener {
 
         private static final Map<Identifier, Integer> LOADING_PRIORITIES = new HashMap<>();
         private static final Gson GSON = new GsonBuilder()
@@ -328,12 +330,22 @@ public class DataObjectRegistry<T extends DataObject<T>> {
         }
 
         @Override
+        public Identifier getId(){
+            return registryId;
+        }
+
+        @Override
+        public Identifier getBefore(){
+            return dependencies.stream().findFirst().orElse(null);
+        }
+
+        @Override
         public CompletableFuture<Void> reload(SharedState currentReload, Executor taskExecutor, PreparationBarrier preparationBarrier, Executor reloadExecutor) {
             return null;
         }
 
         @Override
-        protected void apply(MultiJsonDataContainer prepared, ResourceManager manager, Profiler profiler) {
+        protected void apply(MultiJsonDataContainer prepared, ResourceManager manager, ProfilerFiller profiler) {
 
             clear();
             LOADING_PRIORITIES.clear();
@@ -382,16 +394,6 @@ public class DataObjectRegistry<T extends DataObject<T>> {
 
             LOADING_PRIORITIES.clear();
 
-        }
-
-        @Override
-        public Identifier getFabricId() {
-            return registryId;
-        }
-
-        @Override
-        public Collection<Identifier> getFabricDependencies() {
-            return dependencies;
         }
 
     }

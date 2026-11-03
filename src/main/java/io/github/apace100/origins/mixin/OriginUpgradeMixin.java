@@ -9,7 +9,7 @@ import net.minecraft.advancement.AdvancementEntry;
 import net.minecraft.advancement.AdvancementProgress;
 import net.minecraft.advancement.PlayerAdvancementTracker;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
+import net.minecraft.text.Component;
 import net.minecraft.util.Formatting;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -45,7 +45,7 @@ public abstract class OriginUpgradeMixin {
 
                 String announcement = originUpgrade.announcement();
                 if (announcement != null) {
-                    owner.sendMessage(Text.translatable(announcement).formatted(Formatting.GOLD), false);
+                    owner.sendMessage(Component.translatable(announcement).formatted(Formatting.GOLD), false);
                 }
 
             } catch (Exception e) {

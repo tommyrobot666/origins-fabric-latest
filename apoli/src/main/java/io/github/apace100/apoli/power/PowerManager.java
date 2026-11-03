@@ -10,6 +10,7 @@ import io.github.apace100.apoli.networking.packet.s2c.SyncPowersS2CPacket;
 import io.github.apace100.apoli.power.type.PowerType;
 import io.github.apace100.apoli.power.type.PowerTypes;
 import io.github.apace100.apoli.registry.ApoliRegistries;
+import io.github.apace100.calio.data.IdPreparableReloadListener;
 import io.github.apace100.calio.data.IdentifiableMultiJsonDataLoader;
 import io.github.apace100.calio.data.MultiJsonDataContainer;
 import io.github.apace100.calio.data.SerializableData;
@@ -26,17 +27,8 @@ import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.conditions.v1.ResourceConditions;
 import net.fabricmc.fabric.impl.resource.conditions.ResourceConditionsImpl;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.registry.RegistryOps;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.ResourceType;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.InvalidIdentifierException;
-import net.minecraft.util.JsonHelper;
-import net.minecraft.util.profiler.Profiler;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.resources.PreparableReloadListener;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
@@ -45,7 +37,7 @@ import java.util.*;
 import java.util.function.BiFunction;
 
 @SuppressWarnings("unused")
-public class PowerManager extends IdentifiableMultiJsonDataLoader implements IdentifiableResourceReloadListener {
+public class PowerManager extends IdentifiableMultiJsonDataLoader implements IdPreparableReloadListener {
 
     public static final Set<Identifier> DEPENDENCIES = new HashSet<>();
     public static final Identifier ID = Apoli.identifier("powers");
@@ -72,6 +64,16 @@ public class PowerManager extends IdentifiableMultiJsonDataLoader implements Ide
     PowerManager(RegistryWrapper.WrapperLookup wrapperLookup) {
         super(GSON, "powers", ResourceType.SERVER_DATA);
         this.wrapperLookup = wrapperLookup;
+    }
+
+    @Override
+    public Identifier getId(){
+        return ID;
+    }
+
+    @Override
+    public Identifier getBefore(){
+        return null;
     }
 
     public static void init() {

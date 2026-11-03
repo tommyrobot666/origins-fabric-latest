@@ -2,10 +2,10 @@ package io.github.apace100.origins.registry;
 
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.content.OrbOfOriginItem;
-import net.minecraft.item.Item;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
-import net.minecraft.registry.Registry;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.Item;
+
 
 public class ModItems {
 
@@ -16,7 +16,7 @@ public class ModItems {
     }
 
     static {
-        ORB_OF_ORIGIN = Registry.register(Registries.ITEM, Origins.identifier("orb_of_origin"), new OrbOfOriginItem());
+        ORB_OF_ORIGIN = Registry.register(BuiltInRegistries.ITEM, Origins.identifier("orb_of_origin"), new OrbOfOriginItem());
     }
 
 }

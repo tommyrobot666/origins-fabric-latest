@@ -20,21 +20,23 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
-import net.minecraft.registry.DynamicRegistryManager;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.ResourceType;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.JsonHelper;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.resources.PreparableReloadListener;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.util.GsonHelper;
 import net.minecraft.util.Util;
-import net.minecraft.util.profiler.Profiler;
+import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class OriginManager extends IdentifiableMultiJsonDataLoader implements IdentifiableResourceReloadListener {
+public class OriginManager extends IdentifiableMultiJsonDataLoader implements PreparableReloadListener {
 
 	public static final Set<Identifier> DEPENDENCIES = Util.make(new HashSet<>(), set -> set.add(PowerManager.ID));
 	public static final Identifier ID = Origins.identifier("origins");
@@ -49,17 +51,17 @@ public class OriginManager extends IdentifiableMultiJsonDataLoader implements Id
 		.create();
 
 	public OriginManager() {
-		super(GSON, "origins", ResourceType.SERVER_DATA);
+		super(GSON, "origins", PackType.SERVER_DATA);
 		ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.addPhaseOrdering(PowerManager.ID, ID);
 		ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.register(ID, (player, joined) -> send(player));
 	}
 
 	@Override
-	protected void apply(MultiJsonDataContainer prepared, ResourceManager manager, Profiler profiler) {
+	protected void apply(MultiJsonDataContainer prepared, ResourceManager manager, ProfilerFiller profiler) {
 
 		Origins.LOGGER.info("Reading origins from data packs...");
 
-		DynamicRegistryManager dynamicRegistries = CalioServer.getDynamicRegistries().orElse(null);
+		RegistryAccess dynamicRegistries = CalioServer.getDynamicRegistries().orElse(null);
 		startBuilding();
 
 		if (dynamicRegistries == null) {
@@ -84,10 +86,10 @@ public class OriginManager extends IdentifiableMultiJsonDataLoader implements Id
 				}
 
 				jsonObject.addProperty("id", id.toString());
-				Origin origin = Origin.DATA_TYPE.read(dynamicRegistries.getOps(JsonOps.INSTANCE), jsonObject).getOrThrow();
+				Origin origin = Origin.DATA_TYPE.read(JsonOps.INSTANCE, jsonObject).getOrThrow();
 
 				int prevLoadingPriority = LOADING_PRIORITIES.getOrDefault(id, 0);
-				int currLoadingPriority = JsonHelper.getInt(jsonObject, "loading_priority", 0);
+				int currLoadingPriority = GsonHelper.getAsInt(jsonObject, "loading_priority", 0);
 
 				if (!contains(id)) {
 
@@ -252,9 +254,9 @@ public class OriginManager extends IdentifiableMultiJsonDataLoader implements Id
 		DISABLED_ORIGINS.add(id);
 	}
 
-	public static void send(ServerPlayerEntity player) {
+	public static void send(ServerPlayer player) {
 
-		if (player.server.isRemote()) {
+		if (player.level().getServer().isDedicatedServer()) {
 			ServerPlayNetworking.send(player, new SyncOriginsS2CPacket(ORIGINS_BY_ID));
 		}
 

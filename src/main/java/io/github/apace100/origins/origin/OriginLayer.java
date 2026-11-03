@@ -10,9 +10,8 @@ import io.github.apace100.calio.data.SerializableDataTypes;
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.data.OriginsDataTypes;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -90,13 +89,13 @@ public class OriginLayer implements Comparable<OriginLayer> {
     private final boolean replace;
     private final boolean enabled;
 
-    private final Text name;
+    private final Component name;
     private final GuiTitle guiTitle;
 
     @Nullable
-    private final Text missingName;
+    private final Component missingName;
     @Nullable
-    private final Text missingDescription;
+    private final Component missingDescription;
 
     private final boolean randomAllowed;
     private final boolean unchoosableRandomAllowed;
@@ -110,7 +109,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
 
     private final boolean hidden;
 
-    protected OriginLayer(Identifier id, int order, Collection<ConditionedOrigin> origins, boolean replaceOrigins, boolean replace, boolean enabled, @Nullable Text name, GuiTitle guiTitle, @Nullable Text missingName, @Nullable Text missingDescription, boolean randomAllowed, boolean unchoosableRandomAllowed, Collection<Identifier> originsExcludedFromRandom, boolean replaceOriginsExcludedFromRandom, @Nullable Identifier defaultOrigin, boolean autoChoose, boolean hidden) {
+    protected OriginLayer(Identifier id, int order, Collection<ConditionedOrigin> origins, boolean replaceOrigins, boolean replace, boolean enabled, @Nullable Component name, GuiTitle guiTitle, @Nullable Component missingName, @Nullable Component missingDescription, boolean randomAllowed, boolean unchoosableRandomAllowed, Collection<Identifier> originsExcludedFromRandom, boolean replaceOriginsExcludedFromRandom, @Nullable Identifier defaultOrigin, boolean autoChoose, boolean hidden) {
 
         this.id = id;
         String baseTranslationKey = Util.createTranslationKey("layer", id);
@@ -125,8 +124,8 @@ public class OriginLayer implements Comparable<OriginLayer> {
 
         if (guiTitle == null) {
 
-            Text viewOriginText = Text.translatable(Origins.MODID + ".gui.view_origin.title", this.name);
-            Text chooseOriginText = Text.translatable(Origins.MODID + ".gui.choose_origin.title", this.name);
+            Component viewOriginText = Component.translatable(Origins.MODID + ".gui.view_origin.title", this.name);
+            Component chooseOriginText = Component.translatable(Origins.MODID + ".gui.choose_origin.title", this.name);
 
             this.guiTitle = new GuiTitle(viewOriginText, chooseOriginText);
 
@@ -134,8 +133,8 @@ public class OriginLayer implements Comparable<OriginLayer> {
 
         else {
 
-            Text viewOriginText = TextUtil.forceTranslatable(baseTranslationKey + ".view_origin.name", Optional.ofNullable(guiTitle.viewOrigin()));
-            Text chooseOriginText = TextUtil.forceTranslatable(baseTranslationKey + ".choose_origin.name", Optional.ofNullable(guiTitle.chooseOrigin()));
+            Component viewOriginText = TextUtil.forceTranslatable(baseTranslationKey + ".view_origin.name", Optional.ofNullable(guiTitle.viewOrigin()));
+            Component chooseOriginText = TextUtil.forceTranslatable(baseTranslationKey + ".choose_origin.name", Optional.ofNullable(guiTitle.chooseOrigin()));
 
             this.guiTitle = new GuiTitle(viewOriginText, chooseOriginText);
 
@@ -169,25 +168,25 @@ public class OriginLayer implements Comparable<OriginLayer> {
         return guiTitle;
     }
 
-    public Text getName() {
+    public Component getName() {
         return name;
     }
 
     @Nullable
-    public Text getMissingName() {
+    public Component getMissingName() {
         return missingName;
     }
 
     @Nullable
-    public Text getMissingDescription() {
+    public Component getMissingDescription() {
         return missingDescription;
     }
 
-    public Text getViewOriginTitle() {
+    public Component getViewOriginTitle() {
         return guiTitle.viewOrigin();
     }
 
-    public Text getChooseOriginTitle() {
+    public Component getChooseOriginTitle() {
         return guiTitle.chooseOrigin();
     }
 
@@ -336,7 +335,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
             '}';
     }
 
-    public record GuiTitle(@Nullable Text viewOrigin, @Nullable Text chooseOrigin) {
+    public record GuiTitle(@Nullable Component viewOrigin, @Nullable Component chooseOrigin) {
 
         public static final CompoundSerializableDataType<GuiTitle> DATA_TYPE = SerializableDataType.compound(
             new SerializableData()

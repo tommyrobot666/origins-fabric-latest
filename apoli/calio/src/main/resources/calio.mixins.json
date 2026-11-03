@@ -8,7 +8,6 @@
 		"DataPackContentsMixin",
 		"IngredientAccessor",
 		"IngredientAccessor$EntryAccessor",
-		"ItemStackAccessor",
 		"RegistryEntryListBackedAccessor",
 		"RegistryEntryListNamedAccessor",
 		"RegistryOpsAccessor",

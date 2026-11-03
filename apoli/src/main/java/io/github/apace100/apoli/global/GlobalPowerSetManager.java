@@ -23,15 +23,14 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
-import net.minecraft.entity.EntityType;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.resource.ResourceType;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.JsonHelper;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.util.GsonHelper;
 import net.minecraft.util.Util;
-import net.minecraft.util.profiler.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.entity.EntityType;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -54,8 +53,18 @@ public class GlobalPowerSetManager extends IdentifiableMultiJsonDataLoader imple
     private final RegistryWrapper.WrapperLookup wrapperLookup;
 
     GlobalPowerSetManager(RegistryWrapper.WrapperLookup wrapperLookup) {
-        super(GSON, "global_powers", ResourceType.SERVER_DATA);
+        super(GSON, "global_powers", PackType.SERVER_DATA);
         this.wrapperLookup = wrapperLookup;
+    }
+
+    @Override
+    public Identifier getId(){
+        return ID;
+    }
+
+    @Override
+    public Identifier getBefore(){
+        return Apoli.identifier("powers");
     }
 
     public static void init() {
@@ -70,12 +79,12 @@ public class GlobalPowerSetManager extends IdentifiableMultiJsonDataLoader imple
             }
         });
 
-        ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(ID, GlobalPowerSetManager::new);
+        ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(ID, GlobalPowerSetManager::new);
 
     }
 
     @Override
-    protected void apply(MultiJsonDataContainer prepared, ResourceManager manager, Profiler profiler) {
+    protected void apply(MultiJsonDataContainer prepared, ResourceManager manager, ProfilerFiller profiler) {
 
         Apoli.LOGGER.info("Reading global power sets from data packs...");
         startBuilding();
@@ -93,7 +102,7 @@ public class GlobalPowerSetManager extends IdentifiableMultiJsonDataLoader imple
                 }
 
                 GlobalPowerSet globalPowerSet = GlobalPowerSet.DATA_TYPE.read(wrapperLookup.getOps(JsonOps.INSTANCE), jsonObject).getOrThrow();
-                int currLoadingPriority = JsonHelper.getInt(jsonObject, "loading_priority", 0);
+                int currLoadingPriority = GsonHelper.getAsInt(jsonObject, "loading_priority", 0);
 
                 PrioritizedEntry<GlobalPowerSet> entry = new PrioritizedEntry<>(globalPowerSet, currLoadingPriority);
                 int prevLoadingPriority = LOADING_PRIORITIES.getOrDefault(id, Integer.MIN_VALUE);
@@ -185,8 +194,8 @@ public class GlobalPowerSetManager extends IdentifiableMultiJsonDataLoader imple
 
     private GlobalPowerSet merge(GlobalPowerSet oldSet, GlobalPowerSet newSet) {
 
-        TagLike.Builder<EntityType<?>> oldBuilder = new TagLike.Builder<>(RegistryKeys.ENTITY_TYPE);
-        TagLike.Builder<EntityType<?>> newBuilder = new TagLike.Builder<>(RegistryKeys.ENTITY_TYPE);
+        TagLike.Builder<EntityType<?>> oldBuilder = new TagLike.Builder<>(Registries.ENTITY_TYPE);
+        TagLike.Builder<EntityType<?>> newBuilder = new TagLike.Builder<>(Registries.ENTITY_TYPE);
 
         oldSet.getEntityTypes().map(TagLike::entries).ifPresent(oldBuilder::addAll);
         newSet.getEntityTypes().map(TagLike::entries).ifPresent(newBuilder::addAll);
@@ -207,7 +216,7 @@ public class GlobalPowerSetManager extends IdentifiableMultiJsonDataLoader imple
         powerReferences.addAll(newSet.getPowerReferences());
 
         Optional<TagLike<EntityType<?>>> entityTypes = oldSet.getEntityTypes().isPresent() || newSet.getEntityTypes().isPresent()
-            ? Optional.of(oldBuilder.build(wrapperLookup.getWrapperOrThrow(RegistryKeys.ENTITY_TYPE)))
+            ? Optional.of(oldBuilder.build(wrapperLookup.getWrapperOrThrow(Registries.ENTITY_TYPE)))
             : Optional.empty();
 
         return new GlobalPowerSet(

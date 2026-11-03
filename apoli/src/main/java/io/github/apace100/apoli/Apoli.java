@@ -35,10 +35,9 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.advancement.criterion.Criteria;
-import net.minecraft.entity.LivingEntity;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.Identifier;
+import net.minecraft.world.entity.LivingEntity;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.ladysnake.cca.api.v3.entity.EntityComponentFactoryRegistry;
@@ -136,7 +135,7 @@ public class Apoli implements ModInitializer, EntityComponentInitializer {
 	}
 
 	public static Identifier identifier(String path) {
-		return Identifier.of(MODID, path);
+		return Identifier.fromNamespaceAndPath(MODID, path);
 	}
 
 	public static boolean onServerSide() {

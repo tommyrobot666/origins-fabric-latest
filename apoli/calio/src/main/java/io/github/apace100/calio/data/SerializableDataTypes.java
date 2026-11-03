@@ -16,63 +16,27 @@ import io.github.apace100.calio.util.TagLike;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.fabricmc.fabric.api.recipe.v1.ingredient.CustomIngredient;
 import net.fabricmc.fabric.impl.recipe.ingredient.CustomIngredientImpl;
-import net.fabricmc.fabric.impl.recipe.ingredient.CustomIngredientPacketCodec;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.enums.CameraSubmersionType;
-import net.minecraft.command.argument.BlockArgumentParser;
-import net.minecraft.command.argument.NbtPathArgumentType;
-import net.minecraft.component.ComponentChanges;
-import net.minecraft.component.type.AttributeModifierSlot;
-import net.minecraft.component.type.FoodComponent;
-import net.minecraft.component.type.PotionContentsComponent;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.attribute.EntityAttribute;
-import net.minecraft.entity.attribute.EntityAttributeModifier;
-import net.minecraft.entity.damage.DamageType;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.loot.condition.LootCondition;
-import net.minecraft.loot.function.LootFunction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.*;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.particle.ParticleEffect;
-import net.minecraft.particle.ParticleType;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.particle.SimpleParticleType;
-import net.minecraft.recipe.Ingredient;
-import net.minecraft.recipe.Recipe;
-import net.minecraft.recipe.RecipeEntry;
-import net.minecraft.recipe.RecipeSerializer;
-import net.minecraft.registry.*;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.tag.EntityTypeTags;
-import net.minecraft.registry.tag.TagEntry;
-import net.minecraft.registry.tag.TagKey;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.stat.Stat;
-import net.minecraft.stat.StatType;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextCodecs;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.UseAction;
-import net.minecraft.util.dynamic.Codecs;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
-import net.minecraft.world.World;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.event.GameEvent;
-import net.minecraft.world.explosion.Explosion;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.*;
 import java.util.function.Function;
@@ -81,7 +45,7 @@ import java.util.stream.Stream;
 @SuppressWarnings("unused")
 public final class SerializableDataTypes {
 
-    public static final SerializableDataType<Integer> INT = SerializableDataType.of(Codec.INT, PacketCodecs.INTEGER.cast());
+    public static final SerializableDataType<Integer> INT = SerializableDataType.of(Codec.INT, ByteBufCodecs.INT.cast());
 
 	public static final SerializableDataType<List<Integer>> INTS = INT.list();
 
@@ -95,9 +59,9 @@ public final class SerializableDataTypes {
 
     public static final SerializableDataType<List<Integer>> NON_NEGATIVE_INTS = NON_NEGATIVE_INT.list();
 
-    public static final SerializableDataType<Boolean> BOOLEAN = SerializableDataType.of(Codec.BOOL, PacketCodecs.BOOL.cast());
+    public static final SerializableDataType<Boolean> BOOLEAN = SerializableDataType.of(Codec.BOOL, ByteBufCodecs.BOOL.cast());
 
-    public static final SerializableDataType<Float> FLOAT = SerializableDataType.of(Codec.FLOAT, PacketCodecs.FLOAT.cast());
+    public static final SerializableDataType<Float> FLOAT = SerializableDataType.of(Codec.FLOAT, ByteBufCodecs.FLOAT.cast());
 
     public static final SerializableDataType<List<Float>> FLOATS = FLOAT.list();
 
@@ -111,7 +75,7 @@ public final class SerializableDataTypes {
 
     public static final SerializableDataType<List<Float>> NON_NEGATIVE_FLOATS = NON_NEGATIVE_FLOAT.list();
 
-    public static final SerializableDataType<Double> DOUBLE = SerializableDataType.of(Codec.DOUBLE, PacketCodecs.DOUBLE.cast());
+    public static final SerializableDataType<Double> DOUBLE = SerializableDataType.of(Codec.DOUBLE, ByteBufCodecs.DOUBLE.cast());
 
     public static final SerializableDataType<List<Double>> DOUBLES = DOUBLE.list();
 
@@ -125,7 +89,7 @@ public final class SerializableDataTypes {
 
     public static final SerializableDataType<List<Double>> NON_NEGATIVE_DOUBLES = NON_NEGATIVE_DOUBLE.list();
 
-    public static final SerializableDataType<String> STRING = SerializableDataType.of(Codec.STRING, PacketCodecs.STRING.cast());
+    public static final SerializableDataType<String> STRING = SerializableDataType.of(Codec.STRING, ByteBufCodecs.STRING_UTF8.cast());
 
     public static final SerializableDataType<List<String>> STRINGS = STRING.list();
 
@@ -143,8 +107,8 @@ public final class SerializableDataTypes {
 			}
 
 		},
-		PacketCodec.of(
-			(number, buf) -> {
+		StreamCodec.of(
+			(buf, number) -> {
 				switch (number) {
 					case null ->
 						buf.writeByte(-1);
@@ -166,7 +130,7 @@ public final class SerializableDataTypes {
 					}
 					default -> {
 						buf.writeByte(4);
-						buf.writeString(number.toString());
+						buf.writeUtf(number.toString());
 					}
 				}
 			},
@@ -183,7 +147,7 @@ public final class SerializableDataTypes {
 					case 3 ->
 						buf.readLong();
 					case 4 ->
-						new LazilyParsedNumber(buf.readString());
+						new LazilyParsedNumber(buf.readUtf());
 					default ->
 						throw new IllegalStateException("Unexpected type ID \"" + type + "\" (allowed range: [0-4]");
 				};
@@ -194,12 +158,12 @@ public final class SerializableDataTypes {
 
     public static final SerializableDataType<List<Number>> NUMBERS = NUMBER.list();
 
-    public static final CompoundSerializableDataType<Vec3d> VECTOR = SerializableDataType.compound(
+    public static final CompoundSerializableDataType<Vec3> VECTOR = SerializableDataType.compound(
         new SerializableData()
             .add("x", DOUBLE, 0.0)
             .add("y", DOUBLE, 0.0)
             .add("z", DOUBLE, 0.0),
-        data -> new Vec3d(
+        data -> new Vec3(
             data.getDouble("x"),
             data.getDouble("y"),
             data.getDouble("z")
@@ -217,39 +181,39 @@ public final class SerializableDataTypes {
 
     public static final SerializableDataType<List<Identifier>> IDENTIFIERS = IDENTIFIER.list();
 
-    public static final SerializableDataType<RegistryKey<Enchantment>> ENCHANTMENT = SerializableDataType.registryKey(RegistryKeys.ENCHANTMENT);
+    public static final SerializableDataType<ResourceKey<Enchantment>> ENCHANTMENT = SerializableDataType.registryKey(Registries.ENCHANTMENT);
 
-    public static SerializableDataType<RegistryKey<World>> DIMENSION = SerializableDataType.registryKey(RegistryKeys.WORLD, Set.of(
-        World.OVERWORLD,
-        World.NETHER,
-        World.END
+    public static SerializableDataType<ResourceKey<Level>> DIMENSION = SerializableDataType.registryKey(Registries.WORLD, Set.of(
+        Level.OVERWORLD,
+        Level.NETHER,
+        Level.END
     ));
 
-    public static final SerializableDataType<EntityAttribute> ATTRIBUTE = SerializableDataType.registry(Registries.ATTRIBUTE);
+    public static final SerializableDataType<Attribute> ATTRIBUTE = SerializableDataType.registry(Registries.ATTRIBUTE);
 
-    public static final SerializableDataType<List<EntityAttribute>> ATTRIBUTES = ATTRIBUTE.list();
+    public static final SerializableDataType<List<Attribute>> ATTRIBUTES = ATTRIBUTE.list();
 
-    public static final SerializableDataType<RegistryEntry<EntityAttribute>> ATTRIBUTE_ENTRY = SerializableDataType.registryEntry(Registries.ATTRIBUTE);
+    public static final SerializableDataType<Holder<Attribute>> ATTRIBUTE_ENTRY = SerializableDataType.registryEntry(Registries.ATTRIBUTE);
 
-    public static final SerializableDataType<List<RegistryEntry<EntityAttribute>>> ATTRIBUTE_ENTRIES = ATTRIBUTE_ENTRY.list();
+    public static final SerializableDataType<List<Holder<Attribute>>> ATTRIBUTE_ENTRIES = ATTRIBUTE_ENTRY.list();
 
-    public static final SerializableDataType<EntityAttributeModifier.Operation> MODIFIER_OPERATION = SerializableDataType.enumValue(EntityAttributeModifier.Operation.class);
+    public static final SerializableDataType<AttributeModifier.Operation> MODIFIER_OPERATION = SerializableDataType.enumValue(AttributeModifier.Operation.class);
 
-	public static final SerializableDataType<EntityAttributeModifier> ATTRIBUTE_MODIFIER = SerializableDataType.lazy(() -> SerializableDataType.compound(DataObjectFactories.ATTRIBUTE_MODIFIER));
+	public static final SerializableDataType<AttributeModifier> ATTRIBUTE_MODIFIER = SerializableDataType.lazy(() -> SerializableDataType.compound(DataObjectFactories.ATTRIBUTE_MODIFIER));
 
-    public static final SerializableDataType<List<EntityAttributeModifier>> ATTRIBUTE_MODIFIERS = ATTRIBUTE_MODIFIER.list();
+    public static final SerializableDataType<List<AttributeModifier>> ATTRIBUTE_MODIFIERS = ATTRIBUTE_MODIFIER.list();
 
     public static final SerializableDataType<Item> ITEM = SerializableDataType.registry(Registries.ITEM);
 
-    public static final SerializableDataType<RegistryEntry<Item>> ITEM_ENTRY = SerializableDataType.registryEntry(Registries.ITEM);
+    public static final SerializableDataType<Holder<Item>> ITEM_ENTRY = SerializableDataType.registryEntry(Registries.ITEM);
 
-    public static final SerializableDataType<StatusEffect> STATUS_EFFECT = SerializableDataType.registry(Registries.STATUS_EFFECT);
+    public static final SerializableDataType<MobEffect> STATUS_EFFECT = SerializableDataType.registry(Registries.STATUS_EFFECT);
 
-    public static final SerializableDataType<List<StatusEffect>> STATUS_EFFECTS = STATUS_EFFECT.list();
+    public static final SerializableDataType<List<MobEffect>> STATUS_EFFECTS = STATUS_EFFECT.list();
 
-    public static final SerializableDataType<RegistryEntry<StatusEffect>> STATUS_EFFECT_ENTRY = SerializableDataType.registryEntry(Registries.STATUS_EFFECT);
+    public static final SerializableDataType<Holder<MobEffect>> STATUS_EFFECT_ENTRY = SerializableDataType.registryEntry(Registries.STATUS_EFFECT);
 
-    public static final SerializableDataType<List<RegistryEntry<StatusEffect>>> STATUS_EFFECT_ENTRIES = STATUS_EFFECT_ENTRY.list();
+    public static final SerializableDataType<List<Holder<MobEffect>>> STATUS_EFFECT_ENTRIES = STATUS_EFFECT_ENTRY.list();
 
     public static final CompoundSerializableDataType<StatusEffectInstance> STATUS_EFFECT_INSTANCE = SerializableDataType.compound(
         new SerializableData()
@@ -278,13 +242,13 @@ public final class SerializableDataTypes {
 
     public static final SerializableDataType<List<StatusEffectInstance>> STATUS_EFFECT_INSTANCES = STATUS_EFFECT_INSTANCE.list();
 
-    public static final SerializableDataType<TagKey<Item>> ITEM_TAG = SerializableDataType.tagKey(RegistryKeys.ITEM);
+    public static final SerializableDataType<TagKey<Item>> ITEM_TAG = SerializableDataType.tagKey(Registries.ITEM);
 
-    public static final SerializableDataType<TagKey<Fluid>> FLUID_TAG = SerializableDataType.tagKey(RegistryKeys.FLUID);
+    public static final SerializableDataType<TagKey<Fluid>> FLUID_TAG = SerializableDataType.tagKey(Registries.FLUID);
 
-    public static final SerializableDataType<TagKey<Block>> BLOCK_TAG = SerializableDataType.tagKey(RegistryKeys.BLOCK);
+    public static final SerializableDataType<TagKey<Block>> BLOCK_TAG = SerializableDataType.tagKey(Registries.BLOCK);
 
-    public static final SerializableDataType<TagKey<EntityType<?>>> ENTITY_TAG = SerializableDataType.tagKey(RegistryKeys.ENTITY_TYPE);
+    public static final SerializableDataType<TagKey<EntityType<?>>> ENTITY_TAG = SerializableDataType.tagKey(Registries.ENTITY_TYPE);
 
 	private static final SerializableDataType<Ingredient.StackEntry> INLINE_INGREDIENT_STACK_ENTRY = ITEM
 		.xmap(ItemStack::new, ItemStack::getItem)
@@ -368,7 +332,7 @@ public final class SerializableDataTypes {
 				};
 			}
 		},
-		PacketCodec.ofStatic(
+		StreamCodec.ofStatic(
 			(buf, value) -> {
 				switch (value) {
 					case Ingredient.StackEntry stackEntry -> {
@@ -575,7 +539,7 @@ public final class SerializableDataTypes {
         BlockArgumentParser::stringifyBlockState
     );
 
-    public static final SerializableDataType<RegistryKey<DamageType>> DAMAGE_TYPE = SerializableDataType.registryKey(RegistryKeys.DAMAGE_TYPE);
+    public static final SerializableDataType<ResourceKey<DamageType>> DAMAGE_TYPE = SerializableDataType.registryKey(Registries.DAMAGE_TYPE);
 
     public static final SerializableDataType<TagKey<EntityType<?>>> ENTITY_GROUP_TAG = SerializableDataType.mapped(ImmutableBiMap.of(
         "undead", EntityTypeTags.UNDEAD,
@@ -600,10 +564,10 @@ public final class SerializableDataTypes {
 
     public static final SerializableDataType<NbtElement> NBT_ELEMENT = SerializableDataType.of(
         Codec.PASSTHROUGH.xmap(dynamic -> dynamic.convert(NbtOps.INSTANCE).getValue(), nbtElement -> new Dynamic<>(NbtOps.INSTANCE, nbtElement.copy())),
-        PacketCodecs.nbt(NbtSizeTracker::ofUnlimitedBytes).cast()
+        ByteBufCodecs.nbt(NbtSizeTracker::ofUnlimitedBytes).cast()
     );
 
-    public static final SerializableDataType<NbtCompound> NBT_COMPOUND = SerializableDataType.of(Codec.withAlternative(NbtCompound.CODEC, StringNbtReader.NBT_COMPOUND_CODEC), PacketCodecs.nbtCompound(NbtSizeTracker::ofUnlimitedBytes).cast());
+    public static final SerializableDataType<NbtCompound> NBT_COMPOUND = SerializableDataType.of(Codec.withAlternative(NbtCompound.CODEC, StringNbtReader.NBT_COMPOUND_CODEC), ByteBufCodecs.nbtCompound(NbtSizeTracker::ofUnlimitedBytes).cast());
 
     public static final SerializableDataType<ArgumentWrapper<NbtPathArgumentType.NbtPath>> NBT_PATH = SerializableDataType.argumentType(NbtPathArgumentType.nbtPath());
 
@@ -712,7 +676,7 @@ public final class SerializableDataTypes {
 		);
 	});
 
-    public static final SerializableDataType<ComponentChanges> COMPONENT_CHANGES = SerializableDataType.of(ComponentChanges.CODEC, ComponentChanges.PACKET_CODEC);
+    public static final SerializableDataType<DataComponentPatch> COMPONENT_CHANGES = SerializableDataType.of(DataComponentPatch.CODEC, DataComponentPatch.PACKET_CODEC);
 
 	public static final SerializableDataType<ItemStack> UNCOUNTED_ITEM_STACK = SerializableDataType.lazy(() -> SerializableDataType.compound(DataObjectFactories.UNCOUNTED_ITEM_STACK));
 
@@ -720,11 +684,11 @@ public final class SerializableDataTypes {
 
     public static final SerializableDataType<List<ItemStack>> ITEM_STACKS = ITEM_STACK.list();
 
-    public static final SerializableDataType<Text> TEXT = SerializableDataType.of(TextCodecs.CODEC, TextCodecs.UNLIMITED_REGISTRY_PACKET_CODEC);
+    public static final SerializableDataType<Component> TEXT = SerializableDataType.of(ComponentSerialization.CODEC, ComponentSerialization.UNLIMITED_REGISTRY_PACKET_CODEC);
 
-    public static final SerializableDataType<List<Text>> TEXTS = TEXT.list();
+    public static final SerializableDataType<List<Component>> TEXTS = TEXT.list();
 
-	public static final SerializableDataType<RecipeSerializer<?>> RECIPE_SERIALIZER = SerializableDataType.registry(Registries.RECIPE_SERIALIZER, Identifier.DEFAULT_NAMESPACE, null, (recipeSerializers, id) -> "Recipe serializer \"" + id + "\" is not registered!");
+	public static final SerializableDataType<RecipeSerializer<?>> RECIPE_SERIALIZER = SerializableDataType.registry(BuiltInRegistries.RECIPE_SERIALIZER, Identifier.DEFAULT_NAMESPACE, null, (recipeSerializers, id) -> "Recipe serializer \"" + id + "\" is not registered!");
 
 	public static final CompoundSerializableDataType<Recipe<?>> RECIPE = new CompoundSerializableDataType<>(
 		new SerializableData()
@@ -792,7 +756,7 @@ public final class SerializableDataTypes {
 
 			};
 		},
-		serializableData -> PacketCodec.tuple(
+		serializableData -> StreamCodec.tuple(
 			Identifier.PACKET_CODEC, RecipeEntry::id,
 			Recipe.PACKET_CODEC, RecipeEntry::value,
 			RecipeEntry::new
@@ -803,11 +767,11 @@ public final class SerializableDataTypes {
 
     public static final SerializableDataType<List<GameEvent>> GAME_EVENTS = GAME_EVENT.list();
 
-    public static final SerializableDataType<RegistryEntry<GameEvent>> GAME_EVENT_ENTRY = SerializableDataType.registryEntry(Registries.GAME_EVENT);
+    public static final SerializableDataType<Holder<GameEvent>> GAME_EVENT_ENTRY = SerializableDataType.registryEntry(Registries.GAME_EVENT);
 
-    public static final SerializableDataType<List<RegistryEntry<GameEvent>>> GAME_EVENT_ENTRIES = GAME_EVENT_ENTRY.list();
+    public static final SerializableDataType<List<Holder<GameEvent>>> GAME_EVENT_ENTRIES = GAME_EVENT_ENTRY.list();
 
-    public static final SerializableDataType<TagKey<GameEvent>> GAME_EVENT_TAG = SerializableDataType.tagKey(RegistryKeys.GAME_EVENT);
+    public static final SerializableDataType<TagKey<GameEvent>> GAME_EVENT_TAG = SerializableDataType.tagKey(Registries.GAME_EVENT);
 
     public static final SerializableDataType<Fluid> FLUID = SerializableDataType.registry(Registries.FLUID);
 
@@ -950,7 +914,7 @@ public final class SerializableDataTypes {
         }
     );
 
-    public static final SerializableDataType<TagKey<Biome>> BIOME_TAG = SerializableDataType.tagKey(RegistryKeys.BIOME);
+    public static final SerializableDataType<TagKey<Biome>> BIOME_TAG = SerializableDataType.tagKey(Registries.BIOME);
 
 	public static final SerializableDataType<Codecs.TagEntryId> TAG_ENTRY_ID = STRING.comapFlatMap(
 		str -> str.startsWith("#")
@@ -1026,9 +990,9 @@ public final class SerializableDataTypes {
 
     public static final SerializableDataType<PotionContentsComponent> POTION_CONTENTS_COMPONENT = SerializableDataType.of(PotionContentsComponent.CODEC, PotionContentsComponent.PACKET_CODEC);
 
-    public static final SerializableDataType<RegistryKey<LootFunction>> ITEM_MODIFIER = SerializableDataType.registryKey(RegistryKeys.ITEM_MODIFIER);
+    public static final SerializableDataType<ResourceKey<LootFunction>> ITEM_MODIFIER = SerializableDataType.registryKey(Registries.ITEM_MODIFIER);
 
-    public static final SerializableDataType<RegistryKey<LootCondition>> PREDICATE = SerializableDataType.registryKey(RegistryKeys.PREDICATE);
+    public static final SerializableDataType<ResourceKey<LootCondition>> PREDICATE = SerializableDataType.registryKey(Registries.PREDICATE);
 
 	private static <N extends Number> DataResult<N> createNotPositiveError(N number) {
 		return DataResult.error(() -> "Expected value to be greater than 0! (current value: " + number + ")");

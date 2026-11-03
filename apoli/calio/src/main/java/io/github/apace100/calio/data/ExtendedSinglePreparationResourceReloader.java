@@ -9,7 +9,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-public abstract class ExtendedSinglePreparationResourceReloader<T> extends SimplePreparableReloadListener<T> {
+public abstract class ExtendedSinglePreparationResourceReloader<T> extends IdSimplePreparableReloadListener<T> {
 
     @Override
     public final @NonNull CompletableFuture<Void> reload(final PreparableReloadListener.@NonNull SharedState currentReload, final @NonNull Executor taskExecutor, final PreparableReloadListener.@NonNull PreparationBarrier preparationBarrier, final @NonNull Executor reloadExecutor) {

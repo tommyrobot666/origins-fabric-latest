@@ -19,14 +19,12 @@ import io.github.apace100.origins.registry.ModItems;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
-import net.minecraft.advancement.AdvancementEntry;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.advancements.AdvancementHolder;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,7 +36,7 @@ public class Origin implements Comparable<Origin>, Validatable {
     private static final Set<Origin> SPECIALS = new ObjectOpenHashSet<>();
 
     public static final Origin EMPTY = new Origin(Origins.identifier("empty"), () -> ItemStack.EMPTY, Impact.NONE, Integer.MIN_VALUE);
-    public static final Origin RANDOM = new Origin(Origins.identifier("random"), () -> Suppliers.memoize(() -> ModItems.ORB_OF_ORIGIN).get().getDefaultStack(), Impact.NONE, Integer.MAX_VALUE);
+    public static final Origin RANDOM = new Origin(Origins.identifier("random"), () -> Suppliers.memoize(() -> ModItems.ORB_OF_ORIGIN).get().getDefaultInstance(), Impact.NONE, Integer.MAX_VALUE);
 
     public static final SerializableDataType<Origin> DATA_TYPE = SerializableDataType.compound(
         new SerializableData()
@@ -87,16 +85,16 @@ public class Origin implements Comparable<Origin>, Validatable {
     private final List<OriginUpgrade> upgrades;
     private final Impact impact;
 
-    private final Text name;
-    private final Text description;
+    private final Component name;
+    private final Component description;
 
     private final boolean choosable;
     private final int order;
 
-    protected Origin(Identifier id, Supplier<ItemStack> icon, List<PowerReference> powerReferences, GuiMetadata guiMetadata, List<OriginUpgrade> upgrades, Impact impact, @Nullable Text name, @Nullable Text description, boolean unchoosable, int order) {
+    protected Origin(Identifier id, Supplier<ItemStack> icon, List<PowerReference> powerReferences, GuiMetadata guiMetadata, List<OriginUpgrade> upgrades, Impact impact, @Nullable Component name, @Nullable Component description, boolean unchoosable, int order) {
 
         this.id = id;
-        String baseTranslationKey = Util.createTranslationKey("origin", id);
+        String baseTranslationKey = "origin."+id.getNamespace()+"."+id.getPath();
 
         this.displayItem = Suppliers.compose(ItemStack::copy, icon::get);
         this.powerReferences = new ObjectLinkedOpenHashSet<>(powerReferences);
@@ -116,11 +114,11 @@ public class Origin implements Comparable<Origin>, Validatable {
         SPECIALS.add(this);
     }
 
-    public static Origin of(Identifier id, ItemStack icon, List<PowerReference> powers, GuiMetadata windowTextures, List<OriginUpgrade> upgrades, Impact impact, @Nullable Text name, @Nullable Text description, boolean unchoosable, int order) {
+    public static Origin of(Identifier id, ItemStack icon, List<PowerReference> powers, GuiMetadata windowTextures, List<OriginUpgrade> upgrades, Impact impact, @Nullable Component name, @Nullable Component description, boolean unchoosable, int order) {
         return new Origin(id, () -> icon, powers, windowTextures, upgrades, impact, name, description,  unchoosable, order);
     }
 
-    public static Origin of(Identifier id, ItemStack icon, List<PowerReference> powers, List<OriginUpgrade> upgrades, Impact impact, @Nullable Text name, @Nullable Text description, boolean unchoosable, int order) {
+    public static Origin of(Identifier id, ItemStack icon, List<PowerReference> powers, List<OriginUpgrade> upgrades, Impact impact, @Nullable Component name, @Nullable Component description, boolean unchoosable, int order) {
         return new Origin(id, () -> icon, powers, GuiMetadata.DEFAULT, upgrades, impact, name, description,  unchoosable, order);
     }
 
@@ -154,7 +152,7 @@ public class Origin implements Comparable<Origin>, Validatable {
     }
 
     @Deprecated(forRemoval = true)
-    public Optional<OriginUpgrade> getUpgrade(AdvancementEntry advancement) {
+    public Optional<OriginUpgrade> getUpgrade(AdvancementHolder advancement) {
         return upgrades.stream()
             .filter(ou -> ou.advancementCondition().equals(advancement.id()))
             .findFirst();
@@ -169,11 +167,11 @@ public class Origin implements Comparable<Origin>, Validatable {
         return impact;
     }
 
-    public MutableText getName() {
+    public MutableComponent getName() {
         return name.copy();
     }
 
-    public MutableText getDescription() {
+    public MutableComponent getDescription() {
         return description.copy();
     }
 

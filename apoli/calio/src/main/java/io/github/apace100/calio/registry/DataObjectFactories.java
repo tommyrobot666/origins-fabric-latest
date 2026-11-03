@@ -3,40 +3,39 @@ package io.github.apace100.calio.registry;
 import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.calio.data.SerializableDataType;
 import io.github.apace100.calio.data.SerializableDataTypes;
-import io.github.apace100.calio.mixin.ItemStackAccessor;
-import net.minecraft.component.ComponentChanges;
-import net.minecraft.entity.attribute.EntityAttributeModifier;
-import net.minecraft.item.ItemStack;
+import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.item.ItemStack;
 
 public final class DataObjectFactories {
 
-	public static final DataObjectFactory<EntityAttributeModifier> ATTRIBUTE_MODIFIER = DataObjectFactory.simple(
+	public static final DataObjectFactory<AttributeModifier> ATTRIBUTE_MODIFIER = DataObjectFactory.simple(
 		new SerializableData()
 			.add("id", SerializableDataTypes.IDENTIFIER)
 			.add("amount", SerializableDataTypes.DOUBLE)
 			.add("operation", SerializableDataTypes.MODIFIER_OPERATION),
-		data -> new EntityAttributeModifier(
+		data -> new AttributeModifier(
 			data.get("id"),
 			data.get("amount"),
 			data.get("operation")
 		),
 		(attributeModifier, serializableData) -> serializableData.instance()
 			.set("id", attributeModifier.id())
-			.set("amount", attributeModifier.value())
+			.set("amount", attributeModifier.amount())
 			.set("operation", attributeModifier.operation())
 	);
 
 	public static final DataObjectFactory<ItemStack> UNCOUNTED_ITEM_STACK = DataObjectFactory.simple(
 		new SerializableData()
 			.add("id", SerializableDataTypes.ITEM_ENTRY)
-			.add("components", SerializableDataTypes.COMPONENT_CHANGES, ComponentChanges.EMPTY),
+			.add("components", SerializableDataTypes.COMPONENT_CHANGES, DataComponentPatch.EMPTY),
 		data -> new ItemStack(
 			data.get("id"), 1,
 			data.get("components")
 		),
 		(stack, serializableData) -> serializableData.instance()
-			.set("id", stack.getRegistryEntry())
-			.set("components", stack.getComponentChanges())
+			.set("id", stack.typeHolder())
+			.set("components", stack.getComponentsPatch())
 	);
 
 	public static final DataObjectFactory<ItemStack> ITEM_STACK = DataObjectFactory.simple(
@@ -52,7 +51,7 @@ public final class DataObjectFactories {
 		},
 		(stack, serializableData) -> UNCOUNTED_ITEM_STACK
 			.toData(stack, serializableData)
-			.set("count", ((ItemStackAccessor) (Object) stack).getCountOverride())
+			.set("count", stack.getCount())
 	);
 
 }

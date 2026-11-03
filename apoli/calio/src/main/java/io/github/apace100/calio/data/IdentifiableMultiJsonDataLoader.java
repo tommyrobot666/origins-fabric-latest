@@ -129,4 +129,6 @@ public abstract class IdentifiableMultiJsonDataLoader extends ExtendedSinglePrep
         LOGGER.error("Couldn't parse data file \"{}\" from \"{}\"", resourceId, filePath, exception);
     }
 
+    public abstract Identifier getId();
+    public abstract Identifier getBefore();
 }

@@ -9,6 +9,7 @@ import com.mojang.serialization.*;
 import io.github.apace100.calio.Calio;
 import io.github.apace100.calio.util.Validatable;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
+import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
