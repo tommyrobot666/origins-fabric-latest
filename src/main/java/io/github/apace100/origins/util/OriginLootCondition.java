@@ -6,23 +6,21 @@ import io.github.apace100.origins.component.OriginComponent;
 import io.github.apace100.origins.origin.Origin;
 import io.github.apace100.origins.origin.OriginLayer;
 import io.github.apace100.origins.registry.ModComponents;
-import net.minecraft.loot.condition.LootCondition;
-import net.minecraft.loot.condition.LootConditionType;
-import net.minecraft.loot.context.LootContext;
-import net.minecraft.loot.context.LootContextParameters;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 import java.util.Map;
 import java.util.Optional;
 
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-public class OriginLootCondition implements LootCondition {
+public class OriginLootCondition implements LootItemCondition {
 
     public static final MapCodec<OriginLootCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
         Identifier.CODEC.fieldOf("origin").forGetter(OriginLootCondition::getOrigin),
         Identifier.CODEC.optionalFieldOf("layer").forGetter(OriginLootCondition::getLayer)
     ).apply(instance, OriginLootCondition::new));
-    public static final LootConditionType TYPE = new LootConditionType(CODEC);
 
     private final Identifier origin;
     private final Optional<Identifier> layer;
@@ -33,14 +31,14 @@ public class OriginLootCondition implements LootCondition {
     }
 
     @Override
-    public LootConditionType getType() {
-        return TYPE;
+    public MapCodec<? extends LootItemCondition> codec() {
+        return CODEC;
     }
 
     @Override
     public boolean test(LootContext lootContext) {
 
-        OriginComponent component = ModComponents.ORIGIN.maybeGet(lootContext.get(LootContextParameters.THIS_ENTITY))
+        OriginComponent component = ModComponents.ORIGIN.maybeGet(lootContext.hasParameter(LootContextParams.THIS_ENTITY))
             .orElse(null);
         if (component == null) {
             return false;
@@ -68,5 +66,4 @@ public class OriginLootCondition implements LootCondition {
     public Optional<Identifier> getLayer() {
         return layer;
     }
-
 }

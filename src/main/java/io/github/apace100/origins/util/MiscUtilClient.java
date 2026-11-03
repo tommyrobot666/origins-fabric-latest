@@ -1,19 +1,19 @@
 package io.github.apace100.origins.util;
 
 import io.github.apace100.apoli.util.TextAlignment;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
-import net.minecraft.util.math.MathHelper;
 
 import java.util.Optional;
 
 public class MiscUtilClient {
 
-	public static void drawScrollingText(DrawContext context, TextRenderer renderer, Text text, TextAlignment alignment, int startX, int startY, int endX, int endY, int color, boolean shadow) {
+	public static void drawScrollingText(GuiGraphicsExtractor graphics, Font renderer, Component text, TextAlignment alignment, int startX, int startY, int endX, int endY, int color, boolean shadow) {
 
-		int textWidth = renderer.getWidth(text);
+		int textWidth = renderer.width(text);
 
 		int height = (startY + endY - 9) / 2 + 1;
 		int width = endX - startX;
@@ -21,21 +21,21 @@ public class MiscUtilClient {
 		Optional<Integer> horizontalAlignment = alignment.horizontal(startX, endX, textWidth);
 
 		if (textWidth <= width && horizontalAlignment.isPresent()) {
-			context.drawText(renderer, text, horizontalAlignment.get(), height, color, shadow);
+			graphics.text(renderer, text, horizontalAlignment.get(), height, color, shadow);
 		}
 
 		else {
 
 			int horizontalDiff = textWidth - width;
 
-			double d = (double) Util.getMeasuringTimeMs() / 300;
+			double d = (double) Util.getMillis() / 300;
 			double e = Math.max((double) horizontalDiff * 0.5, 3.0);
 			double f = Math.sin((Math.PI / 2) * Math.cos((Math.PI * 2) * d / e)) / 2.0 + 0.5;
-			double g = MathHelper.lerp(f, 0.0, horizontalDiff);
+			double g = Mth.lerp(f, 0.0, horizontalDiff);
 
-			context.enableScissor(startX, startY, endX, endY);
-			context.drawText(renderer, text, startX - (int) g, height, color, shadow);
-			context.disableScissor();
+			graphics.enableScissor(startX, startY, endX, endY);
+			graphics.text(renderer, text, startX - (int) g, height, color, shadow);
+			graphics.disableScissor();
 
 		}
 

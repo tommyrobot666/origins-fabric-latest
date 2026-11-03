@@ -13,6 +13,7 @@ import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
+import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -112,7 +113,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
     protected OriginLayer(Identifier id, int order, Collection<ConditionedOrigin> origins, boolean replaceOrigins, boolean replace, boolean enabled, @Nullable Component name, GuiTitle guiTitle, @Nullable Component missingName, @Nullable Component missingDescription, boolean randomAllowed, boolean unchoosableRandomAllowed, Collection<Identifier> originsExcludedFromRandom, boolean replaceOriginsExcludedFromRandom, @Nullable Identifier defaultOrigin, boolean autoChoose, boolean hidden) {
 
         this.id = id;
-        String baseTranslationKey = Util.createTranslationKey("layer", id);
+        String baseTranslationKey = Util.makeDescriptionId("layer", id);
 
         this.order = order;
         this.origins = new ObjectLinkedOpenHashSet<>(origins);
@@ -227,7 +228,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
         return getOrigins(null);
     }
 
-    public List<Identifier> getOrigins(@Nullable PlayerEntity playerEntity) {
+    public List<Identifier> getOrigins(@Nullable Player playerEntity) {
         return origins
             .stream()
             .filter(co -> playerEntity == null || co.isConditionFulfilled(playerEntity))
@@ -236,7 +237,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
             .collect(Collectors.toList());
     }
 
-    public int getOriginOptionCount(PlayerEntity playerEntity) {
+    public int getOriginOptionCount(Player playerEntity) {
 
         int choosableOrigins = (int) getOrigins(playerEntity)
             .stream()
@@ -263,7 +264,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
         return contains(origin.getId());
     }
 
-    public boolean contains(Identifier originId, PlayerEntity playerEntity) {
+    public boolean contains(Identifier originId, Player playerEntity) {
         return origins
             .stream()
             .filter(co -> co.isConditionFulfilled(playerEntity))
@@ -271,7 +272,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
             .anyMatch(originId::equals);
     }
 
-    public boolean contains(Origin origin, PlayerEntity playerEntity) {
+    public boolean contains(Origin origin, Player playerEntity) {
         return contains(origin.getId(), playerEntity);
     }
 
@@ -287,7 +288,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
         return hidden;
     }
 
-    public List<Identifier> getRandomOrigins(PlayerEntity playerEntity) {
+    public List<Identifier> getRandomOrigins(Player playerEntity) {
         return origins
             .stream()
             .filter(co -> co.isConditionFulfilled(playerEntity))
@@ -367,7 +368,7 @@ public class OriginLayer implements Comparable<OriginLayer> {
                 .set("origins", conditionedOrigin.origins())
         );
 
-        public boolean isConditionFulfilled(PlayerEntity playerEntity) {
+        public boolean isConditionFulfilled(Player playerEntity) {
             return condition().map(condition -> condition.test(playerEntity)).orElse(true);
         }
 

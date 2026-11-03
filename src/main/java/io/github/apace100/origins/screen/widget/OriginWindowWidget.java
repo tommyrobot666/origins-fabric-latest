@@ -16,17 +16,9 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectSortedSet;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
-import net.minecraft.client.gui.widget.ScrollableWidget;
-import net.minecraft.item.ItemStack;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.AbstractScrollArea;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -38,7 +30,7 @@ import java.util.function.Function;
 //  TODO:   Optimize the rendering impl. by caching the sub-elements (like lines of the origin's name/description,
 //          power names/descriptions, etc.)
 @Environment(EnvType.CLIENT)
-public class OriginWindowWidget extends ScrollableWidget {
+public class OriginWindowWidget extends AbstractScrollArea {
 
 	public static final int LINE_HEIGHT = 11;
 
@@ -343,7 +335,7 @@ public class OriginWindowWidget extends ScrollableWidget {
 
 	}
 
-	protected void renderNameAndImpact(DrawContext context, int mouseX, int mouseY, float delta) {
+	protected void renderNameAndImpact(GuiGraphics context, int mouseX, int mouseY, float delta) {
 
 		if (origin == null) {
 			return;
@@ -374,6 +366,21 @@ public class OriginWindowWidget extends ScrollableWidget {
 		if (impactWidget.isHovered()) {
 			this.tooltips.add(impactWidget);
 		}
+
+	}
+
+	@Override
+	protected int contentHeight() {
+		return 0;
+	}
+
+	@Override
+	protected void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+
+	}
+
+	@Override
+	protected void updateWidgetNarration(NarrationElementOutput output) {
 
 	}
 

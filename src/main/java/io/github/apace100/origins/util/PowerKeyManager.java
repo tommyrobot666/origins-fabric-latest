@@ -5,7 +5,7 @@ import io.github.apace100.apoli.power.type.Active;
 import io.github.apace100.apoli.util.keybinding.KeyBindingReference;
 import io.github.apace100.apoli.util.keybinding.KeyBindingUtil;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 import java.util.Map;
 import java.util.Optional;
