@@ -5,11 +5,11 @@ import io.github.apace100.apoli.util.keybinding.KeyBindingUtil;
 import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.origins.util.PowerKeyManager;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.tooltip.OrderedTextTooltipComponent;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTextTooltip;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,25 +26,25 @@ public record KeybindBadge(Identifier spriteId, String text) implements Badge {
     }
 
     @Override
-    public List<TooltipComponent> getTooltipComponents(Power power, int widthLimit, float time, TextRenderer textRenderer) {
+    public List<ClientTooltipComponent> getTooltipComponents(Power power, int widthLimit, float time, Font textRenderer) {
 
         Optional<String> keyId = PowerKeyManager.getKeyId(power);
-        List<TooltipComponent> tooltips = new ObjectArrayList<>();
+        List<ClientTooltipComponent> tooltips = new ObjectArrayList<>();
 
         if (keyId.isPresent()) {
 
-            Text keyName = KeyBindingUtil.getLocalizedName(keyId.get());
-            Text keyText = Text.translatable(text(), Text.literal("[").append(keyName).append("]"));
+            Component keyName = KeyBindingUtil.getLocalizedName(keyId.get());
+            Component keyText = Component.translatable(text(), Component.literal("[").append(keyName).append("]"));
 
-            if (textRenderer.getWidth(keyText) > widthLimit) {
-                textRenderer.wrapLines(keyText, widthLimit)
+            if (textRenderer.width(keyText) > widthLimit) {
+                textRenderer.split(keyText, widthLimit)
                     .stream()
-                    .map(OrderedTextTooltipComponent::new)
+                    .map(ClientTextTooltip::new)
                     .forEach(tooltips::add);
             }
 
             else {
-                tooltips.add(new OrderedTextTooltipComponent(keyText.asOrderedText()));
+                tooltips.add(new ClientTextTooltip(keyText.getVisualOrderText()));
             }
 
         }

@@ -23,12 +23,15 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.conditions.v1.ResourceConditions;
 import net.fabricmc.fabric.impl.resource.conditions.ResourceConditionsImpl;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.packs.resources.PreparableReloadListener;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.entity.player.Player;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
@@ -59,10 +62,10 @@ public class PowerManager extends IdentifiableMultiJsonDataLoader implements IdP
     private static final Object2ObjectOpenHashMap<Identifier, Power> POWERS_BY_ID = new Object2ObjectOpenHashMap<>();
     private static final ObjectOpenHashSet<Identifier> DISABLED_POWERS = new ObjectOpenHashSet<>();
 
-    private final RegistryWrapper.WrapperLookup wrapperLookup;
+    private final HolderLookup.Provider wrapperLookup;
 
-    PowerManager(RegistryWrapper.WrapperLookup wrapperLookup) {
-        super(GSON, "powers", ResourceType.SERVER_DATA);
+    PowerManager(HolderLookup.Provider wrapperLookup) {
+        super(GSON, "powers", PackType.SERVER_DATA);
         this.wrapperLookup = wrapperLookup;
     }
 
@@ -79,7 +82,7 @@ public class PowerManager extends IdentifiableMultiJsonDataLoader implements IdP
     public static void init() {
 
         ServerEntityEvents.ENTITY_LOAD.register(ID, (entity, world) -> {
-            if (!(entity instanceof PlayerEntity)) {
+            if (!(entity instanceof Player)) {
                 updateData(entity, false);
             }
         });
@@ -89,12 +92,12 @@ public class PowerManager extends IdentifiableMultiJsonDataLoader implements IdP
             updateData(player, joined);
         });
 
-        ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(ID, PowerManager::new);
+        ResourceManagerHelper.get(PackType.SERVER_DATA).registerReloadListener(ID, PowerManager::new);
 
     }
 
     @Override
-    protected void apply(MultiJsonDataContainer prepared, ResourceManager manager, Profiler profiler) {
+    protected void apply(MultiJsonDataContainer prepared, ResourceManager manager, ProfilerFiller profiler) {
 
         Apoli.LOGGER.info("Reading powers from data packs...");
 

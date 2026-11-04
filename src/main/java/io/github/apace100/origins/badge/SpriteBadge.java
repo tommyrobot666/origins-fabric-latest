@@ -2,9 +2,10 @@ package io.github.apace100.origins.badge;
 
 import io.github.apace100.apoli.power.Power;
 import io.github.apace100.calio.data.SerializableData;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.resources.Identifier;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +22,7 @@ public record SpriteBadge(Identifier spriteId) implements Badge {
     }
 
     @Override
-    public List<TooltipComponent> getTooltipComponents(Power power, int widthLimit, float time, TextRenderer textRenderer) {
+    public List<ClientTooltipComponent> getTooltipComponents(Power power, int widthLimit, float time, Font textRenderer) {
         return new ArrayList<>();
     }
 

@@ -6,10 +6,10 @@ import io.github.apace100.calio.registry.DataObject;
 import io.github.apace100.calio.registry.DataObjectFactory;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.resources.Identifier;
 
 import java.util.List;
 
@@ -22,7 +22,7 @@ public interface Badge extends DataObject<Badge> {
     boolean hasTooltip();
     
     @Environment(EnvType.CLIENT)
-    List<TooltipComponent> getTooltipComponents(Power power, int widthLimit, float time, TextRenderer textRenderer);
+    List<ClientTooltipComponent> getTooltipComponents(Power power, int widthLimit, float time, Font textRenderer);
 
     SerializableData.Instance toData(SerializableData.Instance instance);
 
@@ -33,11 +33,11 @@ public interface Badge extends DataObject<Badge> {
         return this.getBadgeFactory();
     }
 
-    static Badge receive(RegistryByteBuf buf) {
+    static Badge receive(RegistryFriendlyByteBuf buf) {
         return BadgeManager.REGISTRY.receiveDataObject(buf);
     }
 
-    default void send(RegistryByteBuf buf) {
+    default void send(RegistryFriendlyByteBuf buf) {
 
         DataObjectFactory<Badge> factory = this.getFactory();
         buf.writeIdentifier(this.getBadgeFactory().id());

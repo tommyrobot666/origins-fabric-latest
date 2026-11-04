@@ -5,7 +5,7 @@ import io.github.apace100.apoli.power.Power;
 import io.github.apace100.origins.badge.Badge;
 import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.EventFactory;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 import java.util.List;
 

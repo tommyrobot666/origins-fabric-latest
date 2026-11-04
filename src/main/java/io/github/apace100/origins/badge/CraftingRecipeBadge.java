@@ -9,18 +9,18 @@ import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.screen.tooltip.CraftingRecipeTooltipComponent;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.inventory.StackReference;
-import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.*;
-import net.minecraft.registry.DynamicRegistryManager;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.collection.DefaultedList;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.SlotAccess;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.*;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Comparator;
@@ -28,9 +28,9 @@ import java.util.LinkedList;
 import java.util.List;
 
 public record CraftingRecipeBadge(Identifier spriteId,
-                                  RecipeEntry<CraftingRecipe> recipe,
-                                  @Nullable Text prefix,
-                                  @Nullable Text suffix) implements Badge {
+                                  RecipeHolder<CraftingRecipe> recipe,
+                                  @Nullable Component prefix,
+                                  @Nullable Component suffix) implements Badge {
 
     public CraftingRecipeBadge(SerializableData.Instance instance) {
         this(instance.getId("sprite"),
@@ -44,15 +44,15 @@ public record CraftingRecipeBadge(Identifier spriteId,
         return true;
     }
 
-    public DefaultedList<ItemStack> peekInputs(float time) {
+    public NonNullList<ItemStack> peekInputs(float time) {
 
-        DefaultedList<ItemStack> inputs = DefaultedList.ofSize(9, ItemStack.EMPTY);
-        List<Ingredient> ingredients = this.recipe.value().getIngredients();
+        NonNullList<ItemStack> inputs = NonNullList.withSize(9, ItemStack.EMPTY);
+        List<Ingredient> ingredients = this.recipe.value().placementInfo().ingredients();
 
-        int seed = MathHelper.floor(time / 30);
+        int seed = Mth.floor(time / 30);
         for (int index = 0; index < ingredients.size(); index++) {
 
-            ItemStack[] stacks = ingredients.get(index).getMatchingStacks();
+            ItemStack[] stacks = ingredients.get(index).items().map(h -> h.value().getDefaultInstance()).toArray(ItemStack[]::new);
             if (stacks.length > 0) {
                 inputs.set(index, stacks[seed % stacks.length]);
             }
@@ -65,32 +65,32 @@ public record CraftingRecipeBadge(Identifier spriteId,
 
     @Environment(EnvType.CLIENT)
     @Override
-    public List<TooltipComponent> getTooltipComponents(Power power, int widthLimit, float time, TextRenderer textRenderer) {
+    public List<ClientTooltipComponent> getTooltipComponents(Power power, int widthLimit, float time, Font textRenderer) {
 
-        MinecraftClient client = MinecraftClient.getInstance();
-        List<TooltipComponent> tooltips = new LinkedList<>();
+        Minecraft client = Minecraft.getInstance();
+        List<ClientTooltipComponent> tooltips = new LinkedList<>();
 
-        if (client.world == null) {
+        if (client.level == null) {
             Origins.LOGGER.warn("Could not construct crafting recipe badge, as world was null!");
             return tooltips;
         }
 
         int recipeWidth = (Recipe<?>) recipe.value() instanceof ShapedRecipe shapedRecipe ? shapedRecipe.getWidth() : 3;
 
-        DynamicRegistryManager registryManager = client.world.getRegistryManager();
-        StackReference outputStackReference = InventoryUtil.createStackReference(recipe.value().getResult(registryManager));
+        RegistryAccess registryManager = client.level.registryAccess();
+        SlotAccess outputStackReference = InventoryUtil.createStackReference(recipe.value().assemble(null));
 
         PowerHolderComponent.getPowerTypes(client.player, ModifyCraftingPowerType.class)
             .stream()
-            .filter(p -> p.doesApply(recipe.id(), outputStackReference.get()))
+            .filter(p -> p.doesApply(recipe.id().identifier(), outputStackReference.get()))
             .max(Comparator.comparing(ModifyCraftingPowerType::getPriority))
             .ifPresent(p -> p.getNewResult(outputStackReference));
         CraftingRecipeTooltipComponent recipeTooltip = new CraftingRecipeTooltipComponent(recipeWidth, this.peekInputs(time), outputStackReference.get());
 
         if (client.options.advancedItemTooltips) {
 
-            Text recipeIdText = Text.literal(recipe.id().toString()).formatted(Formatting.DARK_GRAY);
-            widthLimit = Math.max(130, textRenderer.getWidth(recipeIdText));
+            Component recipeIdText = Component.literal(recipe.id().toString()).withStyle(ChatFormatting.DARK_GRAY);
+            widthLimit = Math.max(130, textRenderer.width(recipeIdText));
 
             if (prefix != null) {
                 TooltipBadge.addLines(tooltips, prefix, textRenderer, widthLimit);

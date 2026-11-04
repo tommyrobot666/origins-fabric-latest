@@ -2,7 +2,7 @@ package io.github.apace100.apoli.integration;
 
 import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.EventFactory;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 /**
  *  This callback is invoked for each power that is overridden. It will pass the ID of the power being overridden.

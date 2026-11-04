@@ -3,7 +3,7 @@ package io.github.apace100.origins.badge;
 import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.calio.data.SerializableData.Instance;
 import io.github.apace100.calio.registry.DataObjectFactory;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 import java.util.function.Function;
 

@@ -2,7 +2,7 @@ package io.github.apace100.apoli.integration;
 
 import com.google.gson.JsonElement;
 import io.github.apace100.apoli.power.Power;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 /**
  * Use this callback by registering an additional data field with `PowerTypes.registerAdditionalData(...)`.

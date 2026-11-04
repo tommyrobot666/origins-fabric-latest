@@ -22,7 +22,15 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.ShapedRecipe;
+import net.minecraft.world.item.crafting.ShapelessRecipe;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -62,9 +70,9 @@ public final class BadgeManager {
         ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.register(REGISTRY.getRegistryId(), (player, joined) -> send(player));
     }
 
-    public static void send(ServerPlayerEntity player) {
+    public static void send(ServerPlayer player) {
 
-        if (player.server.isRemote()) {
+        if (player.level().getServer().isDedicatedServer()) {
             ServerPlayNetworking.send(player, new SyncBadgesS2CPacket(BADGES_BY_ID));
         }
 
@@ -217,8 +225,8 @@ public final class BadgeManager {
 
                 badgeList.add(new CraftingRecipeBadge(
                     RECIPE_BADGE_SPRITE,
-                    new RecipeEntry<>(powerId, craftingRecipe),
-                    Text.translatable("origins.gui.badge.recipe.crafting." + type),
+                    new RecipeHolder<>(ResourceKey.create(Registries.RECIPE,powerId), craftingRecipe),
+                    Component.translatable("origins.gui.badge.recipe.crafting." + type),
                     null
                 ));
 

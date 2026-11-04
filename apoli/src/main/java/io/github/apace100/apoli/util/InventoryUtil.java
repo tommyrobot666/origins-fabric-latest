@@ -8,22 +8,16 @@ import io.github.apace100.apoli.power.PowerReference;
 import io.github.apace100.apoli.power.type.PowerType;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.inventory.Inventory;
-import net.minecraft.inventory.SlotRange;
-import net.minecraft.inventory.SlotRanges;
-import net.minecraft.inventory.StackReference;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.random.Random;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.SlotAccess;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.SlotRange;
+import net.minecraft.world.item.ItemStack;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
-import java.util.OptionalInt;
+import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.ToIntFunction;
@@ -62,7 +56,7 @@ public class InventoryUtil {
     }
 
     public static void throwItem(Entity thrower, ItemStack stack, boolean throwRandomly, boolean retainOwnership, int pickupDelay) {
-        throwItem(thrower, stack, throwRandomly, retainOwnership, item -> item.setPickupDelay(pickupDelay));
+        throwItem(thrower, stack, throwRandomly, retainOwnership, item -> item.setPickUpDelay(pickupDelay));
     }
 
     public static void throwItem(Entity thrower, ItemStack stack, boolean throwRandomly, boolean retainOwnership, Consumer<ItemEntity> postProcessor) {
@@ -71,13 +65,13 @@ public class InventoryUtil {
             return;
         }
 
-        if (thrower instanceof PlayerEntity playerEntity && playerEntity.getWorld().isClient) {
+        if (thrower instanceof Player playerEntity && playerEntity.level().isClient) {
             playerEntity.swingHand(Hand.MAIN_HAND);
         }
 
         double yOffset = thrower.getEyeY() - 0.30000001192092896D;
 
-        ItemEntity itemEntity = new ItemEntity(thrower.getWorld(), thrower.getX(), yOffset, thrower.getZ(), stack);
+        ItemEntity itemEntity = new ItemEntity(thrower.level(), thrower.getX(), yOffset, thrower.getZ(), stack);
         Random random = Random.create();
 
         float f;
@@ -92,18 +86,18 @@ public class InventoryUtil {
             f = random.nextFloat() * 0.5F;
             g = random.nextFloat() * 6.2831855F;
 
-            itemEntity.setVelocity(- MathHelper.sin(g) * f, 0.20000000298023224D, MathHelper.cos(g) * f);
+            itemEntity.setVelocity(- Mth.sin(g) * f, 0.20000000298023224D, Mth.cos(g) * f);
 
         }
 
         else {
 
             f = 0.3F;
-            g = MathHelper.sin(thrower.getPitch() * 0.017453292F);
+            g = Mth.sin(thrower.getPitch() * 0.017453292F);
 
-            float h = MathHelper.cos(thrower.getPitch() * 0.017453292F);
-            float i = MathHelper.sin(thrower.getYaw() * 0.017453292F);
-            float j = MathHelper.cos(thrower.getYaw() * 0.017453292F);
+            float h = Mth.cos(thrower.getPitch() * 0.017453292F);
+            float i = Mth.sin(thrower.getYaw() * 0.017453292F);
+            float j = Mth.cos(thrower.getYaw() * 0.017453292F);
 
             float k = random.nextFloat() * 6.2831855F;
             float l = 0.02F * random.nextFloat();
@@ -116,7 +110,7 @@ public class InventoryUtil {
 
         }
 
-        thrower.getWorld().spawnEntity(itemEntity);
+        thrower.level().spawnEntity(itemEntity);
         postProcessor.accept(itemEntity);
 
     }
@@ -132,7 +126,7 @@ public class InventoryUtil {
                 continue;
             }
 
-            StackReference stackReference = entity.getStackReference(slot);
+            SlotAccess stackReference = entity.getSlot(slot);
             ItemStack stack = stackReference.get();
 
             if (!stack.isEmpty()) {
@@ -165,11 +159,11 @@ public class InventoryUtil {
 
     }
 
-    public static StackReference getStackReferenceFromStack(Entity entity, ItemStack stack) {
+    public static SlotAccess getStackReferenceFromStack(Entity entity, ItemStack stack) {
         return getStackReferenceFromStack(entity, stack, (provStack, refStack) -> provStack == refStack);
     }
 
-    public static StackReference getStackReferenceFromStack(Entity entity, ItemStack stack, BiPredicate<ItemStack, ItemStack> equalityPredicate) {
+    public static SlotAccess getStackReferenceFromStack(Entity entity, ItemStack stack, BiPredicate<ItemStack, ItemStack> equalityPredicate) {
 
         OptionalInt slotToSkip = getSelectedHotBarSlot(entity);
         for (int slot : getAllSlots()) {
@@ -178,14 +172,14 @@ public class InventoryUtil {
                 continue;
             }
 
-            StackReference stackReference = entity.getStackReference(slot);
-            if (stackReference != StackReference.EMPTY && equalityPredicate.test(stack, stackReference.get())) {
+            SlotAccess stackReference = entity.getSlot(slot);
+            if (stackReference != SlotAccess.EMPTY && equalityPredicate.test(stack, stackReference.get())) {
                 return stackReference;
             }
 
         }
 
-        return StackReference.EMPTY;
+        return SlotAccess.EMPTY;
 
     }
 
@@ -198,7 +192,7 @@ public class InventoryUtil {
      */
     public static OptionalInt getSelectedHotBarSlot(Entity entity) {
 
-        SlotRange slotRange = entity instanceof PlayerEntity player
+        SlotRange slotRange = entity instanceof Player player
             ? SlotRanges.fromName("hotbar." + player.getInventory().selectedSlot)
             : null;
 
@@ -213,27 +207,27 @@ public class InventoryUtil {
             && slot < inventory.size();
     }
 
-    public static StackReference getStackReference(Either<Inventory, Entity> source, int slot) {
-        return source.map(inventory -> getInventoryStackReference(inventory, slot), entity -> entity.getStackReference(slot));
+    public static SlotAccess getStackReference(Either<Inventory, Entity> source, int slot) {
+        return source.map(inventory -> getInventoryStackReference(inventory, slot), entity -> entity.getSlot(slot));
     }
 
-    public static StackReference getInventoryStackReference(Inventory inventory, int slot) {
+    public static SlotAccess getInventoryStackReference(Inventory inventory, int slot) {
         return isSlotWithinInventoryBounds(inventory, slot)
-            ? StackReference.of(inventory, slot)
-            : StackReference.EMPTY;
+            ? SlotAccess.of(inventory, slot)
+            : SlotAccess.EMPTY;
     }
 
     /**
      *      <p>Creates a stack reference that is not linked to any entity for use with item actions.</p>
      *
      *      <p>Recommended for usage when either you don't have an entity for this operation, or you
-     *      don't want to set the entity's StackReference.</p>
+     *      don't want to set the entity's SlotAccess.</p>
      *
      *      @param startingStack The ItemStack that this reference will start with.
-     *      @return A {@linkplain StackReference} that contains an ItemStack.
+     *      @return A {@linkplain SlotAccess} that contains an ItemStack.
      */
-    public static StackReference createStackReference(ItemStack startingStack) {
-        return new StackReference() {
+    public static SlotAccess createStackReference(ItemStack startingStack) {
+        return new SlotAccess() {
 
             ItemStack stack = startingStack;
 
@@ -267,13 +261,13 @@ public class InventoryUtil {
 
     }
 
-    public static OptionalInt getSlotFromStackReference(Entity entity, StackReference stackReference) {
+    public static OptionalInt getSlotFromStackReference(Entity entity, SlotAccess stackReference) {
 
         for (int slot : getAllSlots()) {
 
-            StackReference queriedStackRef = entity.getStackReference(slot);
+            SlotAccess queriedStackRef = entity.getSlot(slot);
 
-            if (queriedStackRef != StackReference.EMPTY && queriedStackRef.equals(stackReference)) {
+            if (queriedStackRef != SlotAccess.EMPTY && queriedStackRef.equals(stackReference)) {
                 return OptionalInt.of(slot);
             }
 

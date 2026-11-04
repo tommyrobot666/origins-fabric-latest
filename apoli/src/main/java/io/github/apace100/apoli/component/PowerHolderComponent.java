@@ -16,12 +16,12 @@ import io.github.apace100.apoli.util.modifier.ModifierUtil;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.entity.Entity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.util.Identifier;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -153,7 +153,7 @@ public interface PowerHolderComponent extends AutoSyncedComponent, CommonTicking
         PowerHolderComponent powerComponent = getNullable(entity);
         boolean granted = false;
 
-        if (!entity.getWorld().isClient() && powerComponent != null) {
+        if (!entity.level().isClientSide() && powerComponent != null) {
 
             for (var entry : powersBySource.entrySet()) {
 
@@ -178,7 +178,7 @@ public interface PowerHolderComponent extends AutoSyncedComponent, CommonTicking
         PowerHolderComponent powerComponent = getNullable(entity);
         Map<Identifier, Collection<Power>> revokedPowers = new Object2ObjectLinkedOpenHashMap<>();
 
-        if (!entity.getWorld().isClient() && powerComponent != null) {
+        if (!entity.level().isClientSide() && powerComponent != null) {
 
             for (var source : powerComponent.getSources(power)) {
 
@@ -207,7 +207,7 @@ public interface PowerHolderComponent extends AutoSyncedComponent, CommonTicking
         PowerHolderComponent powerComponent = getNullable(entity);
         Map<Identifier, Collection<Power>> revokedPowers = new Object2ObjectLinkedOpenHashMap<>();
 
-        if (!entity.getWorld().isClient() && powerComponent != null) {
+        if (!entity.level().isClientSide() && powerComponent != null) {
 
             for (var idAndPowers : powersBySource.entrySet()) {
 
@@ -243,7 +243,7 @@ public interface PowerHolderComponent extends AutoSyncedComponent, CommonTicking
         PowerHolderComponent powerComponent = getNullable(entity);
         int revokedPowers = 0;
 
-        if (!entity.getWorld().isClient() && powerComponent != null) {
+        if (!entity.level().isClientSide() && powerComponent != null) {
 
             for (var source : sources) {
                 revokedPowers += powerComponent.removeAllPowersFromSource(source);
@@ -265,7 +265,7 @@ public interface PowerHolderComponent extends AutoSyncedComponent, CommonTicking
 
     static void syncPower(@Nullable Entity entity, @Nullable Power power) {
 
-        if (power == null || entity == null || entity.getWorld().isClient()) {
+        if (power == null || entity == null || entity.level().isClientSide()) {
             return;
         }
 
@@ -292,12 +292,12 @@ public interface PowerHolderComponent extends AutoSyncedComponent, CommonTicking
 
     static <P extends Power> void syncPowers(@Nullable Entity entity, Collection<P> powers) {
 
-        if (entity == null || entity.getWorld().isClient() || powers.isEmpty()) {
+        if (entity == null || entity.level().isClientSide() || powers.isEmpty()) {
             return;
         }
 
         PowerHolderComponent component = getNullable(entity);
-        Map<Identifier, NbtElement> powersToSync = new HashMap<>();
+        Map<Identifier, Tag> powersToSync = new HashMap<>();
 
         if (component == null) {
             return;
@@ -463,13 +463,13 @@ public interface PowerHolderComponent extends AutoSyncedComponent, CommonTicking
 
         public static final PacketHandler<Map<Identifier, Collection<Power>>> GRANT_POWERS = new PacketHandler.Impl<>(
             powersBySource -> (buf, recipient) -> buf.writeMap(powersBySource,
-                PacketByteBuf::writeIdentifier,
+                FriendlyByteBuf::writeIdentifier,
                 (vbuf, powers) -> vbuf.writeCollection(powers, (ebuf, power) -> ebuf.writeIdentifier(power.getId()))
             ),
             (buf, component) -> {
 
                 var powersBySource = buf.readMap(
-                    PacketByteBuf::readIdentifier,
+                    FriendlyByteBuf::readIdentifier,
                     vbuf -> vbuf.readCollection(ArrayList::new, ebuf -> PowerManager.get(ebuf.readIdentifier())));
 
                 powersBySource.forEach((source, powers) -> powers.forEach(power -> component.addPower(power, source)));
@@ -483,7 +483,7 @@ public interface PowerHolderComponent extends AutoSyncedComponent, CommonTicking
             (buf, component) -> {
 
                 var powersBySource = buf.readMap(
-                    PacketByteBuf::readIdentifier,
+                    FriendlyByteBuf::readIdentifier,
                     vbuf -> vbuf.readCollection(ArrayList::new, ebuf -> PowerManager.get(ebuf.readIdentifier())));
 
                 powersBySource.forEach((source, powers) -> powers.forEach(power -> component.removePower(power, source)));
@@ -494,9 +494,9 @@ public interface PowerHolderComponent extends AutoSyncedComponent, CommonTicking
 
         public static final PacketHandler<Collection<Identifier>> REVOKE_ALL_POWERS = new PacketHandler.Impl<>(
             sources -> (buf, recipient) ->
-                buf.writeCollection(sources, PacketByteBuf::writeIdentifier),
+                buf.writeCollection(sources, FriendlyByteBuf::writeIdentifier),
             (buf, component) -> buf
-                .readCollection(ArrayList::new, PacketByteBuf::readIdentifier)
+                .readCollection(ArrayList::new, FriendlyByteBuf::readIdentifier)
                 .forEach(component::removeAllPowersFromSource),
             3
         );
@@ -507,7 +507,7 @@ public interface PowerHolderComponent extends AutoSyncedComponent, CommonTicking
 
         public abstract ComponentPacketWriter write(T type);
 
-        public abstract void apply(RegistryByteBuf buf, PowerHolderComponent component);
+        public abstract void apply(RegistryFriendlyByteBuf buf, PowerHolderComponent component);
 
         public abstract int getId();
 
@@ -529,11 +529,11 @@ public interface PowerHolderComponent extends AutoSyncedComponent, CommonTicking
         public static final class Impl<T> extends PacketHandler<T> {
 
             final Function<T, ComponentPacketWriter> writer;
-            final BiConsumer<RegistryByteBuf, PowerHolderComponent> applier;
+            final BiConsumer<RegistryFriendlyByteBuf, PowerHolderComponent> applier;
 
             final int id;
 
-            private Impl(Function<T, ComponentPacketWriter> writer, BiConsumer<RegistryByteBuf, PowerHolderComponent> applier, int id) {
+            private Impl(Function<T, ComponentPacketWriter> writer, BiConsumer<RegistryFriendlyByteBuf, PowerHolderComponent> applier, int id) {
                 this.writer = writer;
                 this.applier = applier;
                 this.id = id;
@@ -545,7 +545,7 @@ public interface PowerHolderComponent extends AutoSyncedComponent, CommonTicking
             }
 
             @Override
-            public void apply(RegistryByteBuf buf, PowerHolderComponent component) {
+            public void apply(RegistryFriendlyByteBuf buf, PowerHolderComponent component) {
                 applier.accept(buf, component);
             }
 
