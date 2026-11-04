@@ -17,6 +17,7 @@ import io.github.apace100.origins.origin.OriginLayerManager;
 import io.github.apace100.origins.origin.OriginManager;
 import io.github.apace100.origins.power.type.OriginsPowerTypes;
 import io.github.apace100.origins.registry.*;
+import io.github.apace100.origins.util.ChoseOriginCriterion;
 import io.github.apace100.origins.util.OriginLootCondition;
 import io.github.apace100.origins.util.OriginsConfigSerializer;
 import io.github.apace100.origins.util.OriginsJsonConfigSerializer;
@@ -30,6 +31,7 @@ import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.resource.v1.ResourceLoader;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -103,16 +105,16 @@ public class Origins implements ModInitializer {
 
 		PowerManager.DEPENDENCIES.add(badgeManager.getId());
 
-		ResourceLoader.get(PackType.SERVER_DATA).registerReloadListener(originManager.getId(),originManager);
-		ResourceLoader.get(PackType.SERVER_DATA).registerReloadListener(originLayerManager.getId(),originLayerManager);
-		ResourceLoader.get(PackType.SERVER_DATA).registerReloadListener(badgeManager.getId(),badgeManager);
+		IdPreparableReloadListener.registerReloadListener(PackType.SERVER_DATA,originManager);
+		IdPreparableReloadListener.registerReloadListener(PackType.SERVER_DATA,originLayerManager);
+		IdPreparableReloadListener.registerReloadListener(PackType.SERVER_DATA,badgeManager);
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> OriginCommand.register(dispatcher.getRoot()));
 		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register((content) -> content.accept(ModItems.ORB_OF_ORIGIN));
 
 
-//		Criteria.register(ChoseOriginCriterion.ID.toString(), ChoseOriginCriterion.INSTANCE);
-		Registry.register(BuiltInRegistries.LOOT_CONDITION_TYPE, identifier("origin"), OriginLootCondition.TYPE);
+		Registry.register(BuiltInRegistries.TRIGGER_TYPES, ChoseOriginCriterion.ID.toString(), ChoseOriginCriterion.INSTANCE);
+		Registry.register(BuiltInRegistries.LOOT_CONDITION_TYPE, identifier("origin"), OriginLootCondition.CODEC);
 
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> ModComponents.ORIGIN.get(handler.player).selectingOrigin(false));
 

@@ -94,7 +94,7 @@ public class Origin implements Comparable<Origin>, Validatable {
     protected Origin(Identifier id, Supplier<ItemStack> icon, List<PowerReference> powerReferences, GuiMetadata guiMetadata, List<OriginUpgrade> upgrades, Impact impact, @Nullable Component name, @Nullable Component description, boolean unchoosable, int order) {
 
         this.id = id;
-        String baseTranslationKey = "origin."+id.getNamespace()+"."+id.getPath();
+        String baseTranslationKey = Util.makeDescriptionId("origin", id);
 
         this.displayItem = Suppliers.compose(ItemStack::copy, icon::get);
         this.powerReferences = new ObjectLinkedOpenHashSet<>(powerReferences);

@@ -5,10 +5,9 @@ import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.origin.Origin;
 import io.github.apace100.origins.origin.OriginLayer;
 import io.github.apace100.origins.screen.widget.OriginWindowWidget;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 
 import java.util.function.Function;
 
@@ -19,7 +18,7 @@ public abstract class OriginDisplayScreen extends Screen {
     protected final OriginWindowWidget windowWidget;
     protected final boolean showDirtBackground;
 
-    public OriginDisplayScreen(Text title, boolean showDirtBackground) {
+    public OriginDisplayScreen(Component title, boolean showDirtBackground) {
         super(title);
         this.windowWidget = new OriginWindowWidget();
         this.showDirtBackground = showDirtBackground;
