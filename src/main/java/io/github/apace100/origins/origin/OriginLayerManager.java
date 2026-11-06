@@ -8,6 +8,7 @@ import io.github.apace100.calio.CalioServer;
 import io.github.apace100.calio.data.IdentifiableMultiJsonDataLoader;
 import io.github.apace100.calio.data.MultiJsonDataContainer;
 import io.github.apace100.calio.data.SerializableData;
+import io.github.apace100.calio.data.IdPreparableReloadListener;
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.component.OriginComponent;
 import io.github.apace100.origins.integration.CarpetIntegration;
@@ -23,13 +24,16 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.util.GsonHelper;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -38,7 +42,7 @@ import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
-public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implements IdResourceReloadListener {
+public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implements IdPreparableReloadListener {
 
     public static final Set<Identifier> DEPENDENCIES = Util.make(new ObjectOpenHashSet<>(), set -> set.add(OriginManager.ID));
     public static final Identifier ID = Origins.identifier("origin_layers");
@@ -66,6 +70,16 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
             updateData(player, joined);
 
         });
+    }
+
+    @Override
+    public Identifier getId() {
+        return ID;
+    }
+
+    @Override
+    public Identifier getBefore() {
+        return OriginManager.ID;
     }
 
     private void updateData(ServerPlayer player, boolean init) {
@@ -151,7 +165,7 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
 
         Origins.LOGGER.info("Reading origin layers from data packs...");
 
-        DynamicRegistryManager dynamicRegistries = CalioServer.getDynamicRegistries().orElse(null);
+        RegistryAccess dynamicRegistries = CalioServer.getDynamicRegistries().orElse(null);
         startBuilding();
 
         if (dynamicRegistries == null) {
@@ -179,8 +193,8 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
 
                 jsonObject.addProperty("id", id.toString());
 
-                OriginLayer layer = OriginLayer.DATA_TYPE.read(dynamicRegistries.getOps(JsonOps.INSTANCE), jsonObject).getOrThrow();
-                int currLoadingPriority = JsonHelper.getInt(jsonObject, "loading_priority", 0);
+                OriginLayer layer = OriginLayer.DATA_TYPE.read(dynamicRegistries.createSerializationContext(JsonOps.INSTANCE), jsonObject).getOrThrow();
+                int currLoadingPriority = GsonHelper.getAsInt(jsonObject, "loading_priority", 0);
 
                 PrioritizedEntry<OriginLayer> entry = new PrioritizedEntry<>(layer, currLoadingPriority);
                 int prevLoadingPriority = LOADING_PRIORITIES.getOrDefault(id, Integer.MIN_VALUE);
@@ -250,16 +264,6 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
 
         OriginDataLoadedCallback.EVENT.invoker().onDataLoaded(false);
 
-    }
-
-    @Override
-    public Identifier getFabricId() {
-        return ID;
-    }
-
-    @Override
-    public Collection<Identifier> getFabricDependencies() {
-        return DEPENDENCIES;
     }
 
     private static OriginLayer merge(OriginLayer oldLayer, OriginLayer newLayer) {
@@ -347,11 +351,11 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
         return LAYERS_BY_ID.containsKey(id);
     }
 
-    public static int getOriginOptionCount(PlayerEntity playerEntity) {
+    public static int getOriginOptionCount(Player playerEntity) {
         return getOriginOptionCount(playerEntity, (layer, component) -> !component.hasOrigin(layer));
     }
 
-    public static int getOriginOptionCount(PlayerEntity playerEntity, BiPredicate<OriginLayer, OriginComponent> condition) {
+    public static int getOriginOptionCount(Player playerEntity, BiPredicate<OriginLayer, OriginComponent> condition) {
         return values()
             .stream()
             .filter(ol -> ol.isEnabled() && ModComponents.ORIGIN.maybeGet(playerEntity).map(oc -> condition.test(ol, oc)).orElse(false))
@@ -375,7 +379,7 @@ public class OriginLayerManager extends IdentifiableMultiJsonDataLoader implemen
 
     public static void send(ServerPlayer player) {
 
-        if (player.server.isRemote()) {
+        if (player.level().getServer().isDedicatedServer()) {
             ServerPlayNetworking.send(player, new SyncOriginLayersS2CPacket(LAYERS_BY_ID));
         }
 

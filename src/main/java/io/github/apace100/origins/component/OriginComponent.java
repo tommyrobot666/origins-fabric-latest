@@ -7,8 +7,8 @@ import io.github.apace100.apoli.power.type.PowerType;
 import io.github.apace100.origins.origin.*;
 import io.github.apace100.origins.power.type.OriginsActionOnCallbackPowerType;
 import io.github.apace100.origins.registry.ModComponents;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.Player;
 import org.ladysnake.cca.api.v3.component.sync.AutoSyncedComponent;
 import org.ladysnake.cca.api.v3.component.tick.ServerTickingComponent;
 
@@ -30,11 +30,11 @@ public interface OriginComponent extends AutoSyncedComponent, ServerTickingCompo
 	void setOrigin(OriginLayer layer, Origin origin);
 	void sync();
 
-	static void sync(PlayerEntity player) {
+	static void sync(Player player) {
 		ModComponents.ORIGIN.sync(player);
 	}
 
-	static void onChosen(PlayerEntity player, boolean hadOriginBefore) {
+	static void onChosen(Player player, boolean hadOriginBefore) {
 
 		if (!hadOriginBefore) {
 			PowerHolderComponent.getPowerTypes(player, ModifyPlayerSpawnPowerType.class)
@@ -47,7 +47,7 @@ public interface OriginComponent extends AutoSyncedComponent, ServerTickingCompo
 
 	}
 
-	static void partialOnChosen(PlayerEntity player, boolean hadOriginBefore, Origin origin) {
+	static void partialOnChosen(Player player, boolean hadOriginBefore, Origin origin) {
 
 		PowerHolderComponent powerComponent = PowerHolderComponent.getOptional(player).orElseThrow();
 
@@ -67,7 +67,7 @@ public interface OriginComponent extends AutoSyncedComponent, ServerTickingCompo
 
 	}
 
-	default boolean checkAutoChoosingLayers(PlayerEntity player, boolean includeDefaults) {
+	default boolean checkAutoChoosingLayers(Player player, boolean includeDefaults) {
 
 		List<OriginLayer> layers = new ArrayList<>();
 		boolean choseOneAutomatically = false;

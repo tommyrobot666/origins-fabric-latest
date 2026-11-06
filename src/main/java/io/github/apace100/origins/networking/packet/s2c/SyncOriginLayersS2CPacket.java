@@ -2,21 +2,22 @@ package io.github.apace100.origins.networking.packet.s2c;
 
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.origin.OriginLayer;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.Identifier;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-public record SyncOriginLayersS2CPacket(Map<Identifier, OriginLayer> layersById) implements CustomPayload {
+public record SyncOriginLayersS2CPacket(Map<Identifier, OriginLayer> layersById) implements CustomPacketPayload {
 
-    public static final Id<SyncOriginLayersS2CPacket> PACKET_ID = new Id<>(Origins.identifier("s2c/sync_origin_layer_registry"));
-    public static final PacketCodec<RegistryByteBuf, SyncOriginLayersS2CPacket> PACKET_CODEC = PacketCodec.of(SyncOriginLayersS2CPacket::write, SyncOriginLayersS2CPacket::read);
+    public static final Type<SyncOriginLayersS2CPacket> PACKET_ID = new Type<>(Origins.identifier("s2c/sync_origin_layer_registry"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, SyncOriginLayersS2CPacket> PACKET_CODEC = StreamCodec.of((b,p) -> p.write(b), SyncOriginLayersS2CPacket::read);
 
-    public static SyncOriginLayersS2CPacket read(RegistryByteBuf buf) {
+    public static SyncOriginLayersS2CPacket read(RegistryFriendlyByteBuf buf) {
 
         Map<Identifier, OriginLayer> layersById = new HashMap<>();
         int count = buf.readVarInt();
@@ -39,7 +40,7 @@ public record SyncOriginLayersS2CPacket(Map<Identifier, OriginLayer> layersById)
 
     }
 
-    public void write(RegistryByteBuf buf) {
+    public void write(RegistryFriendlyByteBuf buf) {
 
         Collection<OriginLayer> layers = layersById.values();
 
@@ -49,8 +50,7 @@ public record SyncOriginLayersS2CPacket(Map<Identifier, OriginLayer> layersById)
     }
 
     @Override
-    public Id<? extends CustomPayload> getId() {
+    public @NonNull Type<? extends CustomPacketPayload> type() {
         return PACKET_ID;
     }
-
 }

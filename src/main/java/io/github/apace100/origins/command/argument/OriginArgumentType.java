@@ -8,9 +8,9 @@ import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import io.github.apace100.origins.origin.*;
-import net.minecraft.command.CommandSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
@@ -18,7 +18,7 @@ import java.util.stream.Stream;
 public class OriginArgumentType implements ArgumentType<Identifier> {
 
    public static final DynamicCommandExceptionType ORIGIN_NOT_FOUND = new DynamicCommandExceptionType(
-       o -> Text.translatable("commands.origin.origin_not_found", o)
+       o -> Component.translatable("commands.origin.origin_not_found", o)
    );
 
    public static OriginArgumentType origin() {
@@ -34,7 +34,7 @@ public class OriginArgumentType implements ArgumentType<Identifier> {
 
    @Override
    public Identifier parse(StringReader reader) throws CommandSyntaxException {
-      return Identifier.fromCommandInputNonEmpty(reader);
+      return Identifier.read(reader);
    }
 
    @Override
@@ -48,12 +48,12 @@ public class OriginArgumentType implements ArgumentType<Identifier> {
          origins.add(Origin.EMPTY.getId());
          layer.getOrigins().forEach(origins);
 
-         return CommandSource.suggestIdentifiers(origins.build(), builder);
+         return SharedSuggestionProvider.suggestResource(origins.build(), builder);
 
       }
 
       catch (Exception e) {
-         return CommandSource.suggestIdentifiers(Stream.of(), builder);
+         return SharedSuggestionProvider.suggestResource(Stream.of(), builder);
       }
 
    }

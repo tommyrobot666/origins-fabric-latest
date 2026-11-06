@@ -22,9 +22,7 @@ import org.jetbrains.annotations.UnknownNullability;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.mojang.brigadier.builder.RequiredArgumentBuilder.argument;
-import static net.minecraft.commands.Commands.LEVEL_GAMEMASTERS;
-import static net.minecraft.commands.Commands.literal;
+import static net.minecraft.commands.Commands.*;
 
 public class OriginCommand {
 
@@ -273,7 +271,7 @@ public class OriginCommand {
 
 			CommandSourceStack source = context.getSource();
 			Collection<ServerPlayer> targets = self
-				? List.of(source.getPlayerOrThrow())
+				? List.of(source.getPlayerOrException())
 				: EntityArgument.getPlayers(context, "targets");
 
 			List<OriginLayer> layers = OriginLayerManager.values()
@@ -333,7 +331,7 @@ public class OriginCommand {
 			.toList();
 
 		OriginComponent originComponent = ModComponents.ORIGIN.get(target);
-		Origin origin = origins.get(Random.create().nextInt(origins.size()));
+		Origin origin = origins.get(new Random().nextInt(origins.size()));
 
 		boolean hadOriginBefore = originComponent.hadOriginBefore();
 		boolean hadAllOrigins = originComponent.hasAllOrigins();

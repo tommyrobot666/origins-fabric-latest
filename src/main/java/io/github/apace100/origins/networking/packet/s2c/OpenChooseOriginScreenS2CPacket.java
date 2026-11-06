@@ -2,18 +2,18 @@ package io.github.apace100.origins.networking.packet.s2c;
 
 import io.github.apace100.origins.Origins;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.network.packet.CustomPayload;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import org.jspecify.annotations.NonNull;
 
-public record OpenChooseOriginScreenS2CPacket(boolean showBackground) implements CustomPayload {
+public record OpenChooseOriginScreenS2CPacket(boolean showBackground) implements CustomPacketPayload {
 
-    public static final Id<OpenChooseOriginScreenS2CPacket> PACKET_ID = new Id<>(Origins.identifier("s2c/open_origin_screen"));
-    public static final PacketCodec<ByteBuf, OpenChooseOriginScreenS2CPacket> PACKET_CODEC = PacketCodecs.BOOL.xmap(OpenChooseOriginScreenS2CPacket::new, OpenChooseOriginScreenS2CPacket::showBackground);
+    public static final Type<OpenChooseOriginScreenS2CPacket> PACKET_ID = new Type<>(Origins.identifier("s2c/open_origin_screen"));
+    public static final StreamCodec<ByteBuf, OpenChooseOriginScreenS2CPacket> PACKET_CODEC = ByteBufCodecs.BOOL.map(OpenChooseOriginScreenS2CPacket::new, OpenChooseOriginScreenS2CPacket::showBackground);
 
     @Override
-    public Id<? extends CustomPayload> getId() {
+    public @NonNull Type<? extends CustomPacketPayload> type() {
         return PACKET_ID;
     }
-
 }

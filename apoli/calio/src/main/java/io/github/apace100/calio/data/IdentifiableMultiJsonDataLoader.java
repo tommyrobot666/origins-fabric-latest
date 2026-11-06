@@ -130,5 +130,5 @@ public abstract class IdentifiableMultiJsonDataLoader extends ExtendedSinglePrep
     }
 
     public abstract Identifier getId();
-    public abstract Identifier getBefore();
+    public abstract @Nullable Identifier getBefore();
 }

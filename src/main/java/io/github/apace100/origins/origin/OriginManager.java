@@ -8,6 +8,7 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import io.github.apace100.apoli.power.PowerManager;
 import io.github.apace100.calio.CalioServer;
+import io.github.apace100.calio.data.IdPreparableReloadListener;
 import io.github.apace100.calio.data.IdentifiableMultiJsonDataLoader;
 import io.github.apace100.calio.data.MultiJsonDataContainer;
 import io.github.apace100.calio.data.SerializableData;
