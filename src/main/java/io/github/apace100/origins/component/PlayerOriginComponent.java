@@ -10,15 +10,15 @@ import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.origin.*;
 import io.github.apace100.origins.registry.ModComponents;
 import io.github.apace100.origins.util.ChoseOriginCriterion;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.registry.RegistryOps;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
-import org.jetbrains.annotations.NotNull;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryOps;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import org.jspecify.annotations.NonNull;
+import org.ladysnake.cca.mixin.base.TagValueInputAccessor;
 
 import java.util.List;
 import java.util.Map;
@@ -28,14 +28,14 @@ import java.util.function.Predicate;
 public class PlayerOriginComponent implements OriginComponent {
 
     private final Map<OriginLayer, Origin> origins = new ConcurrentHashMap<>();
-    private final PlayerEntity player;
+    private final Player player;
 
     private boolean selectingOrigin = false;
     private boolean hadOriginBefore = false;
 
     private int invulnerabilityTicks = 0;
 
-    public PlayerOriginComponent(PlayerEntity player) {
+    public PlayerOriginComponent(Player player) {
         this.player = player;
     }
 
@@ -54,7 +54,7 @@ public class PlayerOriginComponent implements OriginComponent {
 
         this.selectingOrigin = selectingOrigin;
 
-        if (selectingOrigin && !player.getWorld().isClient) {
+        if (selectingOrigin && !player.level().isClientSide()) {
             invulnerabilityTicks = 60;
         }
 
@@ -125,7 +125,7 @@ public class PlayerOriginComponent implements OriginComponent {
         }
 
         PowerHolderComponent powerComponent = PowerHolderComponent.KEY.get(player);
-        RegistryOps<JsonElement> jsonOps = player.getRegistryManager().getOps(JsonOps.INSTANCE);
+        RegistryOps<JsonElement> jsonOps = player.registryAccess().createSerializationContext(JsonOps.INSTANCE);
 
         if (oldOrigin != null) {
 
@@ -149,7 +149,7 @@ public class PlayerOriginComponent implements OriginComponent {
             this.hadOriginBefore = true;
         }
 
-        if (player instanceof ServerPlayerEntity spe) {
+        if (player instanceof ServerPlayer spe) {
             ChoseOriginCriterion.INSTANCE.trigger(spe, origin);
         }
 
@@ -186,7 +186,7 @@ public class PlayerOriginComponent implements OriginComponent {
     }
 
     @Override
-    public void readFromNbt(@NotNull NbtCompound compoundTag, RegistryWrapper.WrapperLookup wrapperLookup) {
+    public void readData(@NonNull ValueInput compoundTag) {
 
         if (player == null) {
             Origins.LOGGER.error("Player was null in PlayerOriginComponent#fromTag! This is not supposed to happen D:");
@@ -201,21 +201,22 @@ public class PlayerOriginComponent implements OriginComponent {
             try {
 
                 OriginLayer defaultOriginLayer = OriginLayerManager.get(Origins.identifier("origin"));
-                origins.put(defaultOriginLayer, OriginManager.get(Identifier.of(compoundTag.getString("Origin"))));
+                origins.put(defaultOriginLayer, OriginManager.get(Identifier.parse(compoundTag.getString("Origin").orElseThrow())));
 
             } catch (Exception ignored) {
                 Origins.LOGGER.warn("Player {} had old origin which could not be migrated: {}", player.getName().getString(), compoundTag.getString("Origin"));
             }
         } else {
 
-            NbtList originLayersNbt = compoundTag.getList("OriginLayers", NbtElement.COMPOUND_TYPE);
-            for (int i = 0; i < originLayersNbt.size(); i++) {
+            ValueInput.ValueInputList originLayersNbt = compoundTag.childrenList("OriginLayers").orElseThrow();
+            var originLayerNbtIterator = originLayersNbt.iterator();
+            while (originLayerNbtIterator.hasNext()) {
 
-                NbtCompound originLayerNbt = originLayersNbt.getCompound(i);
+                ValueInput originLayerNbt = originLayerNbtIterator.next();
                 try {
 
-                    Identifier layerId = Identifier.of(originLayerNbt.getString("Layer"));
-                    Identifier originId = Identifier.of(originLayerNbt.getString("Origin"));
+                    Identifier layerId = Identifier.parse(originLayerNbt.getString("Layer").orElseThrow());
+                    Identifier originId = Identifier.parse(originLayerNbt.getString("Origin").orElseThrow());
 
                     OriginLayer layer = OriginLayerManager.get(layerId);
                     Origin origin = OriginManager.get(originId);
@@ -239,10 +240,10 @@ public class PlayerOriginComponent implements OriginComponent {
 
         }
 
-        selectingOrigin = compoundTag.getBoolean("SelectingOrigin");
-        hadOriginBefore = compoundTag.getBoolean("HadOriginBefore");
+        selectingOrigin = compoundTag.getBooleanOr("SelectingOrigin",false);
+        hadOriginBefore = compoundTag.getBooleanOr("HadOriginBefore",false);
 
-        if (player.getWorld().isClient) {
+        if (player.level().isClientSide()) {
             return;
         }
 
@@ -262,15 +263,14 @@ public class PlayerOriginComponent implements OriginComponent {
             return;
         }
 
-        NbtList legacyPowersNbt = compoundTag.getList("Powers", NbtElement.COMPOUND_TYPE);
-        for (int i = 0; i < legacyPowersNbt.size(); i++) {
+        ValueInput.ValueInputList legacyPowersNbt = compoundTag.childrenList("Powers").orElseThrow();
+        for (ValueInput legacyPowerNbt : legacyPowersNbt) {
 
-            NbtCompound legacyPowerNbt = legacyPowersNbt.getCompound(i);
-            String legacyPowerString = legacyPowerNbt.getString("Type");
+            String legacyPowerString = legacyPowerNbt.getString("Type").orElseThrow();
 
             try {
 
-                Identifier legacyPowerId = Identifier.of(legacyPowerString);
+                Identifier legacyPowerId = Identifier.parse(legacyPowerString);
                 Power legacyPower = PowerManager.get(legacyPowerId);
 
                 if (!powerComponent.hasPower(legacyPower)) {
@@ -278,8 +278,8 @@ public class PlayerOriginComponent implements OriginComponent {
                 }
 
                 try {
-                    NbtElement legacyPowerData = legacyPowerNbt.get("Data");
-                    powerComponent.getPowerType(legacyPower).fromTag(legacyPowerData);
+                    TagValueInput legacyPowerData = (TagValueInput) legacyPowerNbt.child("Data").orElseThrow();
+                    powerComponent.getPowerType(legacyPower).fromTag(((TagValueInputAccessor) legacyPowerData).getInput());
                 } catch (ClassCastException e) {
                     //  Occurs when the power was overridden by a data pack since last world load
                     //  where the overridden power now uses different data classes
@@ -296,21 +296,18 @@ public class PlayerOriginComponent implements OriginComponent {
     }
 
     @Override
-    public void writeToNbt(@NotNull NbtCompound compoundTag, RegistryWrapper.WrapperLookup wrapperLookup) {
+    public void writeData(@NonNull ValueOutput compoundTag) {
 
-        NbtList originLayersNbt = new NbtList();
+        ValueOutput.ValueOutputList originLayersNbt = compoundTag.childrenList("OriginLayers");
         origins.forEach((layer, origin) -> {
 
-            NbtCompound originLayerNbt = new NbtCompound();
+            ValueOutput originLayerNbt = originLayersNbt.addChild();
 
             originLayerNbt.putString("Layer", layer.getId().toString());
             originLayerNbt.putString("Origin", origin.getId().toString());
 
-            originLayersNbt.add(originLayerNbt);
-
         });
 
-        compoundTag.put("OriginLayers", originLayersNbt);
         compoundTag.putBoolean("SelectingOrigin", selectingOrigin);
         compoundTag.putBoolean("HadOriginBefore", hadOriginBefore);
 

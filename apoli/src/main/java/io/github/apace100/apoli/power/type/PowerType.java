@@ -1,6 +1,5 @@
 package io.github.apace100.apoli.power.type;
 
-import com.mojang.datafixers.types.templates.Tag;
 import io.github.apace100.apoli.condition.EntityCondition;
 import io.github.apace100.apoli.data.TypedDataObjectFactory;
 import io.github.apace100.apoli.power.Power;
@@ -8,6 +7,7 @@ import io.github.apace100.apoli.power.PowerConfiguration;
 import io.github.apace100.calio.data.SerializableData;
 import io.github.apace100.calio.util.Validatable;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;

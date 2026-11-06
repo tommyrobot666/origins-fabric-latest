@@ -14,24 +14,26 @@ import io.github.apace100.origins.origin.OriginManager;
 import io.github.apace100.origins.registry.ModComponents;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.tooltip.TooltipAppender;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponentGetter;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipProvider;
 import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Collection;
 import java.util.Set;
 import java.util.function.Consumer;
 
-public class ItemOriginsComponent implements TooltipAppender {
+public class ItemOriginsComponent implements TooltipProvider {
 
     public static final ItemOriginsComponent DEFAULT = new ItemOriginsComponent(new ObjectLinkedOpenHashSet<>());
 
@@ -40,7 +42,7 @@ public class ItemOriginsComponent implements TooltipAppender {
         ItemOriginsComponent::entries
     );
 
-    public static final PacketCodec<PacketByteBuf, ItemOriginsComponent> PACKET_CODEC = PacketCodecs.collection(ObjectLinkedOpenHashSet::new, Entry.PACKET_CODEC).xmap(
+    public static final StreamCodec<FriendlyByteBuf, ItemOriginsComponent> PACKET_CODEC = ByteBufCodecs.collection(ObjectLinkedOpenHashSet::new, Entry.PACKET_CODEC).map(
         ItemOriginsComponent::new,
 		ItemOriginsComponent::entries
     );
@@ -52,7 +54,7 @@ public class ItemOriginsComponent implements TooltipAppender {
     }
 
     @Override
-    public void appendTooltip(Item.TooltipContext context, Consumer<Text> tooltip, TooltipType type) {
+    public void addToTooltip(Item.@NonNull TooltipContext context, @NonNull Consumer<Component> tooltip, @NonNull TooltipFlag flag, @NonNull DataComponentGetter components) {
 
         String baseKey = "component.item.origins.origin";
         boolean appendedTooltips = false;
@@ -79,13 +81,13 @@ public class ItemOriginsComponent implements TooltipAppender {
 				args = new Object[]{layer.getName(), origin.getName()};
 			}
 
-			tooltip.accept(Text.translatable(translationKey, args).formatted(Formatting.GRAY));
+			tooltip.accept(Component.translatable(translationKey, args).withStyle(ChatFormatting.GRAY));
 			appendedTooltips = true;
 
 		}
 
         if (!appendedTooltips) {
-            tooltip.accept(Text.translatable(baseKey + ".generic").formatted(Formatting.GRAY));
+            tooltip.accept(Component.translatable(baseKey + ".generic").withStyle(ChatFormatting.GRAY));
         }
 
     }
@@ -96,7 +98,7 @@ public class ItemOriginsComponent implements TooltipAppender {
 
     public boolean setOrigin(LivingEntity user) {
 
-        if (!(user instanceof ServerPlayerEntity player)) {
+        if (!(user instanceof ServerPlayer player)) {
             return false;
         }
 
@@ -128,16 +130,16 @@ public class ItemOriginsComponent implements TooltipAppender {
 
     }
 
-    public record Entry(Identifier layerId, Identifier originId) {
+	public record Entry(Identifier layerId, Identifier originId) {
 
         public static final MapCodec<Entry> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Identifier.CODEC.fieldOf("layer").forGetter(Entry::layerId),
             Identifier.CODEC.optionalFieldOf("origin", Origin.EMPTY.getId()).forGetter(Entry::originId)
         ).apply(instance, Entry::new));
 
-        public static final PacketCodec<PacketByteBuf, Entry> PACKET_CODEC = PacketCodec.tuple(
-            Identifier.PACKET_CODEC, Entry::layerId,
-            Identifier.PACKET_CODEC, Entry::originId,
+        public static final StreamCodec<FriendlyByteBuf, Entry> PACKET_CODEC = StreamCodec.composite(
+            Identifier.STREAM_CODEC, Entry::layerId,
+            Identifier.STREAM_CODEC, Entry::originId,
             Entry::new
         );
 

@@ -16,6 +16,7 @@ import io.github.apace100.apoli.util.modifier.ModifierUtil;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -274,7 +275,7 @@ public interface PowerHolderComponent extends AutoSyncedComponent, CommonTicking
             return;
         }
 
-        NbtCompound powerData = new NbtCompound();
+        CompoundTag powerData = new CompoundTag();
         PowerType powerType = component.getPowerType(power);
 
         if (powerType == null) {
