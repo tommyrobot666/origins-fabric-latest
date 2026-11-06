@@ -4,7 +4,7 @@ import io.github.apace100.apoli.condition.type.ConditionType;
 import io.github.apace100.apoli.data.TypedDataObjectFactory;
 import io.github.apace100.apoli.util.TypeConfiguration;
 import io.github.apace100.calio.data.SerializableData;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;

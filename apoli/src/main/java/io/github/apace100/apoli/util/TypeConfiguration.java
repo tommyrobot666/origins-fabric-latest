@@ -3,7 +3,7 @@ package io.github.apace100.apoli.util;
 import com.mojang.serialization.MapCodec;
 import io.github.apace100.apoli.data.TypedDataObjectFactory;
 import io.github.apace100.calio.data.CompoundSerializableDataType;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 public interface TypeConfiguration<T> {
 

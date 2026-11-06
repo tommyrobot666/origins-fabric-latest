@@ -5,7 +5,7 @@ import io.github.apace100.apoli.condition.type.EntityConditionType;
 import io.github.apace100.apoli.registry.ApoliRegistries;
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.condition.entity.type.OriginEntityConditionType;
-import net.minecraft.registry.Registry;
+import net.minecraft.core.Registry;
 
 public class OriginsEntityConditionTypes {
 

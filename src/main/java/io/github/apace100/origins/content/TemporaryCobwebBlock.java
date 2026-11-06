@@ -1,43 +1,46 @@
 package io.github.apace100.origins.content;
 
-import net.minecraft.block.*;
-import net.minecraft.entity.Entity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.World;
-import net.minecraft.world.tick.OrderedTick;
 
-public class TemporaryCobwebBlock extends CobwebBlock {
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.WebBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import org.jspecify.annotations.NonNull;
 
-	public TemporaryCobwebBlock(AbstractBlock.Settings settings) {
+public class TemporaryCobwebBlock extends WebBlock {
+
+	public TemporaryCobwebBlock(BlockBehaviour.Properties settings) {
 		super(settings);
 	}
 
 	@Override
-	public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-		if(!world.isClient) {
-			world.setBlockState(pos, Blocks.AIR.getDefaultState());
+	protected void tick(@NonNull BlockState state, ServerLevel world, @NonNull BlockPos pos, @NonNull RandomSource random) {
+		if(!world.isClientSide()) {
+			world.setBlock(pos, Blocks.AIR.defaultBlockState(),UPDATE_ALL);
 		}
 	}
 
 	@Override
-	public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
-		return VoxelShapes.empty();
+	public VoxelShape getShape(@NonNull BlockState state, @NonNull BlockGetter world, @NonNull BlockPos pos, @NonNull CollisionContext context) {
+		return Shapes.empty();
 	}
 
 	@Override
-	public VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
-		return VoxelShapes.empty();
+	public VoxelShape getCollisionShape(@NonNull BlockState state, @NonNull BlockGetter world, @NonNull BlockPos pos, @NonNull CollisionContext context) {
+		return Shapes.empty();
 	}
 
 	@Override
-	public void onBlockAdded(BlockState state, World worldIn, BlockPos pos, BlockState oldState, boolean isMoving) {
-		worldIn.scheduleBlockTick(pos, this, 60);
-		super.onBlockAdded(state, worldIn, pos, oldState, isMoving);
+	public void onPlace(@NonNull BlockState state, Level worldIn, @NonNull BlockPos pos, @NonNull BlockState oldState, boolean isMoving) {
+		worldIn.scheduleTick(pos, this, 60);
 	}
 
 }
