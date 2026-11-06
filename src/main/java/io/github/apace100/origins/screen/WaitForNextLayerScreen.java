@@ -4,9 +4,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.apace100.origins.component.OriginComponent;
 import io.github.apace100.origins.origin.OriginLayer;
 import io.github.apace100.origins.registry.ModComponents;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 import java.util.List;
 
@@ -19,7 +18,7 @@ public class WaitForNextLayerScreen extends Screen {
     private int optionCount;
 
     protected WaitForNextLayerScreen(List<OriginLayer> layers, int index, boolean showDirtBackground) {
-        super(Text.empty());
+        super(Component.empty());
         this.layers = layers;
         this.index = index;
         this.showDirtBackground = showDirtBackground;

@@ -2,23 +2,22 @@ package io.github.apace100.origins.networking.task;
 
 import io.github.apace100.origins.networking.packet.VersionHandshakePacket;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationNetworking;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.server.network.ServerPlayerConfigurationTask;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.server.network.ConfigurationTask;
 
 import java.util.function.Consumer;
 
-public record VersionHandshakeTask(int[] semver) implements ServerPlayerConfigurationTask {
+public record VersionHandshakeTask(int[] semver) implements ConfigurationTask {
 
-    public static final ServerPlayerConfigurationTask.Key KEY = new ServerPlayerConfigurationTask.Key("origins:handshake/version");
+    public static final ConfigurationTask.Type KEY = new ConfigurationTask.Type("origins:handshake/version");
 
     @Override
-    public void sendPacket(Consumer<Packet<?>> sender) {
-        sender.accept(ServerConfigurationNetworking.createS2CPacket(new VersionHandshakePacket(semver)));
+    public void start(Consumer<Packet<?>> sender) {
+        sender.accept(ServerConfigurationNetworking.createClientboundPacket(new VersionHandshakePacket(semver)));
     }
 
     @Override
-    public Key getKey() {
+    public Type type() {
         return KEY;
     }
-
 }

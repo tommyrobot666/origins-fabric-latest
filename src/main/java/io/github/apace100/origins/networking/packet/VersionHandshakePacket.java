@@ -1,20 +1,19 @@
 package io.github.apace100.origins.networking.packet;
 
 import io.github.apace100.origins.Origins;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.CustomPayload;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
-public record VersionHandshakePacket(int[] semver) implements CustomPayload {
+public record VersionHandshakePacket(int[] semver) implements CustomPacketPayload {
 
-    private static final PacketCodec<PacketByteBuf, int[]> INT_ARRAY = PacketCodec.ofStatic(PacketByteBuf::writeIntArray, PacketByteBuf::readIntArray);
+    private static final StreamCodec<FriendlyByteBuf, int[]> INT_ARRAY = StreamCodec.of(FriendlyByteBuf::writeVarIntArray, FriendlyByteBuf::readVarIntArray);
 
-    public static final Id<VersionHandshakePacket> PACKET_ID = new Id<>(Origins.identifier("handshake/version"));
-    public static final PacketCodec<PacketByteBuf, VersionHandshakePacket> PACKET_CODEC = INT_ARRAY.xmap(VersionHandshakePacket::new, VersionHandshakePacket::semver);
+    public static final Type<VersionHandshakePacket> PACKET_ID = new Type<>(Origins.identifier("handshake/version"));
+    public static final StreamCodec<FriendlyByteBuf, VersionHandshakePacket> PACKET_CODEC = INT_ARRAY.map(VersionHandshakePacket::new, VersionHandshakePacket::semver);
 
     @Override
-    public Id<? extends CustomPayload> getId() {
+    public Type<? extends CustomPacketPayload> type() {
         return PACKET_ID;
     }
-
 }

@@ -11,18 +11,18 @@ public class ModPackets {
 
     public static void register() {
 
-        PayloadTypeRegistry.configurationS2C().register(VersionHandshakePacket.PACKET_ID, VersionHandshakePacket.PACKET_CODEC);
-        PayloadTypeRegistry.configurationS2C().register(OriginsInstalledS2CPacket.PACKET_ID, OriginsInstalledS2CPacket.PACKET_CODEC);
-        PayloadTypeRegistry.configurationC2S().register(VersionHandshakePacket.PACKET_ID, VersionHandshakePacket.PACKET_CODEC);
+        PayloadTypeRegistry.clientboundConfiguration().register(VersionHandshakePacket.PACKET_ID, VersionHandshakePacket.PACKET_CODEC);
+        PayloadTypeRegistry.clientboundConfiguration().register(OriginsInstalledS2CPacket.PACKET_ID, OriginsInstalledS2CPacket.PACKET_CODEC);
+        PayloadTypeRegistry.serverboundConfiguration().register(VersionHandshakePacket.PACKET_ID, VersionHandshakePacket.PACKET_CODEC);
 
-        PayloadTypeRegistry.playS2C().register(ConfirmOriginS2CPacket.PACKET_ID, ConfirmOriginS2CPacket.PACKET_CODEC);
-        PayloadTypeRegistry.playS2C().register(OpenChooseOriginScreenS2CPacket.PACKET_ID, OpenChooseOriginScreenS2CPacket.PACKET_CODEC);
-        PayloadTypeRegistry.playS2C().register(SyncBadgesS2CPacket.PACKET_ID, SyncBadgesS2CPacket.PACKET_CODEC);
-        PayloadTypeRegistry.playS2C().register(SyncOriginLayersS2CPacket.PACKET_ID, SyncOriginLayersS2CPacket.PACKET_CODEC);
-        PayloadTypeRegistry.playS2C().register(SyncOriginsS2CPacket.PACKET_ID, SyncOriginsS2CPacket.PACKET_CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(ConfirmOriginS2CPacket.PACKET_ID, ConfirmOriginS2CPacket.PACKET_CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(OpenChooseOriginScreenS2CPacket.PACKET_ID, OpenChooseOriginScreenS2CPacket.PACKET_CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(SyncBadgesS2CPacket.PACKET_ID, SyncBadgesS2CPacket.PACKET_CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(SyncOriginLayersS2CPacket.PACKET_ID, SyncOriginLayersS2CPacket.PACKET_CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(SyncOriginsS2CPacket.PACKET_ID, SyncOriginsS2CPacket.PACKET_CODEC);
 
-        PayloadTypeRegistry.playC2S().register(ChooseOriginC2SPacket.PACKET_ID, ChooseOriginC2SPacket.PACKET_CODEC);
-        PayloadTypeRegistry.playC2S().register(ChooseRandomOriginC2SPacket.PACKET_ID, ChooseRandomOriginC2SPacket.PACKET_CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(ChooseOriginC2SPacket.PACKET_ID, ChooseOriginC2SPacket.PACKET_CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(ChooseRandomOriginC2SPacket.PACKET_ID, ChooseRandomOriginC2SPacket.PACKET_CODEC);
 
     }
 

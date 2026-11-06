@@ -15,10 +15,10 @@ import net.fabricmc.fabric.api.networking.v1.ServerConfigurationConnectionEvents
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationNetworking;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerConfigurationNetworkHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerConfigurationPacketListenerImpl;
 import net.minecraft.util.Util;
 
 import java.util.Arrays;
@@ -44,7 +44,7 @@ public class ModPacketsC2S {
 
     private static void onChooseOrigin(ChooseOriginC2SPacket packet, ServerPlayNetworking.Context context) {
 
-        ServerPlayerEntity player = context.player();
+        ServerPlayer player = context.player();
         OriginComponent originComponent = ModComponents.ORIGIN.get(player);
 
         OriginLayer layer = OriginLayerManager.getNullable(packet.layerId());
@@ -103,7 +103,7 @@ public class ModPacketsC2S {
 
     private static void chooseRandomOrigin(ChooseRandomOriginC2SPacket packet, ServerPlayNetworking.Context context) {
 
-        ServerPlayerEntity player = context.player();
+        ServerPlayer player = context.player();
         OriginComponent originComponent = ModComponents.ORIGIN.get(player);
 
         OriginLayer layer = OriginLayerManager.getNullable(packet.layerId());
@@ -128,7 +128,7 @@ public class ModPacketsC2S {
 
             //  Random origin IDs are already validated whether they're in the origin manager, so no need to check here
             Optional<Origin> randomOrigin = Util
-                .getRandomOrEmpty(layer.getRandomOrigins(player), player.getRandom())
+                .getRandomSafe(layer.getRandomOrigins(player), player.getRandom())
                 .map(OriginManager::get);
 
             if (randomOrigin.isEmpty()) {
@@ -162,7 +162,7 @@ public class ModPacketsC2S {
 
     private static void receiveHandshakeReply(VersionHandshakePacket packet, ServerConfigurationNetworking.Context context) {
 
-        ServerConfigurationNetworkHandler handler = context.networkHandler();
+        ServerConfigurationPacketListenerImpl handler = context.packetListener();
         boolean mismatch = packet.semver().length != Origins.SEMVER.length;
 
         for (int i = 0; !mismatch && i < packet.semver().length - 1; i++) {
@@ -170,7 +170,7 @@ public class ModPacketsC2S {
         }
 
         if (mismatch) {
-            handler.disconnect(Text.translatable("origins.gui.version_mismatch", Origins.VERSION, Strings.join(Arrays.stream(packet.semver()).mapToObj(String::valueOf).toList(), ".")));
+            handler.disconnect(Component.translatable("origins.gui.version_mismatch", Origins.VERSION, Strings.join(Arrays.stream(packet.semver()).mapToObj(String::valueOf).toList(), ".")));
         }
 
         else {
@@ -179,23 +179,23 @@ public class ModPacketsC2S {
 
     }
 
-    private static void sendOriginsInstallationStatus(ServerConfigurationNetworkHandler handler, MinecraftServer server) {
-        handler.sendPacket(ServerConfigurationNetworking.createS2CPacket(OriginsInstalledS2CPacket.INSTANCE));
+    private static void sendOriginsInstallationStatus(ServerConfigurationPacketListenerImpl handler, MinecraftServer server) {
+        handler.send(ServerConfigurationNetworking.createClientboundPacket(OriginsInstalledS2CPacket.INSTANCE));
     }
 
-    private static void sendHandshake(ServerConfigurationNetworkHandler handler, MinecraftServer server) {
+    private static void sendHandshake(ServerConfigurationPacketListenerImpl handler, MinecraftServer server) {
 
         if (ServerConfigurationNetworking.canSend(handler, VersionHandshakePacket.PACKET_ID)) {
             handler.addTask(new VersionHandshakeTask(Origins.SEMVER));
         }
 
         else {
-            handler.disconnect(Text.of("This server requires you to install the Origins mod (v " + Origins.VERSION + ") to play."));
+            handler.disconnect(Component.literal("This server requires you to install the Origins mod (v " + Origins.VERSION + ") to play."));
         }
 
     }
 
-    private static void confirmOrigin(ServerPlayerEntity player, OriginLayer layer, Origin origin) {
+    private static void confirmOrigin(ServerPlayer player, OriginLayer layer, Origin origin) {
         ServerPlayNetworking.send(player, new ConfirmOriginS2CPacket(layer.getId(), origin.getId()));
     }
 

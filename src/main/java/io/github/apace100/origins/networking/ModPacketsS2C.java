@@ -18,9 +18,9 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationConnectio
 import net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationNetworking;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientConfigurationNetworkHandler;
-import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientConfigurationPacketListenerImpl;
+import net.minecraft.client.player.LocalPlayer;
 
 import java.util.Collections;
 import java.util.List;
@@ -49,7 +49,7 @@ public class ModPacketsS2C {
     @Environment(EnvType.CLIENT)
     private static void receiveOriginConfirmation(ConfirmOriginS2CPacket packet, ClientPlayNetworking.Context context) {
 
-        ClientPlayerEntity player = context.player();
+        LocalPlayer player = context.player();
 
         OriginLayer layer = OriginLayerManager.get(packet.layerId());
         Origin origin = OriginManager.get(packet.originId());
@@ -57,7 +57,7 @@ public class ModPacketsS2C {
         OriginComponent component = ModComponents.ORIGIN.get(player);
         component.setOrigin(layer, origin);
 
-        if (context.client().currentScreen instanceof WaitForNextLayerScreen nextLayerScreen) {
+        if (context.client().gui.screen() instanceof WaitForNextLayerScreen nextLayerScreen) {
             nextLayerScreen.nextOrClose();
         }
 
@@ -76,7 +76,7 @@ public class ModPacketsS2C {
             .forEach(layers::add);
 
         Collections.sort(layers);
-        context.client().setScreen(new ChooseOriginScreen(layers, packet.showBackground()));
+        context.client().gui.setScreen(new ChooseOriginScreen(layers, packet.showBackground()));
 
     }
 
@@ -91,7 +91,7 @@ public class ModPacketsS2C {
     }
 
     @Environment(EnvType.CLIENT)
-    private static void resetOriginsInstallationStatus(ClientConfigurationNetworkHandler handler, MinecraftClient client) {
+    private static void resetOriginsInstallationStatus(ClientConfigurationPacketListenerImpl handler, Minecraft client) {
         client.submit(() -> OriginsClient.isServerRunningOrigins = false);
     }
 
