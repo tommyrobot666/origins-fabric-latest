@@ -58,6 +58,16 @@ public class OriginManager extends IdentifiableMultiJsonDataLoader implements Pr
 	}
 
 	@Override
+	public Identifier getId() {
+		return ID;
+	}
+
+	@Override
+	public @Nullable Identifier getBefore() {
+		return PowerManager.ID;
+	}
+
+	@Override
 	protected void apply(MultiJsonDataContainer prepared, ResourceManager manager, ProfilerFiller profiler) {
 
 		Origins.LOGGER.info("Reading origins from data packs...");
@@ -145,16 +155,6 @@ public class OriginManager extends IdentifiableMultiJsonDataLoader implements Pr
 			disable(resourceId);
 		}
 
-	}
-
-	@Override
-	public Identifier getFabricId() {
-		return ID;
-	}
-
-	@Override
-	public Collection<Identifier> getFabricDependencies() {
-		return DEPENDENCIES;
 	}
 
 	public static Set<Map.Entry<Identifier, Origin>> entrySet() {

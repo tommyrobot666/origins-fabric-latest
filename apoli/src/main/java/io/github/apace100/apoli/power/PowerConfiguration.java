@@ -5,7 +5,7 @@ import io.github.apace100.apoli.data.TypedDataObjectFactory;
 import io.github.apace100.apoli.power.type.PowerType;
 import io.github.apace100.apoli.util.TypeConfiguration;
 import io.github.apace100.calio.data.SerializableData;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 import java.util.Optional;
 import java.util.function.BiFunction;

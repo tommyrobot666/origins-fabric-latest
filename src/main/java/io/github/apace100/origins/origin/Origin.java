@@ -19,11 +19,12 @@ import io.github.apace100.origins.registry.ModItems;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
-import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -43,7 +44,6 @@ public class Origin implements Comparable<Origin>, Validatable {
             .add("id", SerializableDataTypes.IDENTIFIER)
             .add("icon", SerializableDataTypes.UNCOUNTED_ITEM_STACK, ItemStack.EMPTY)
             .add("powers", ApoliDataTypes.POWER_REFERENCE.list(), new ObjectArrayList<>())
-            .add("upgrades", OriginsDataTypes.UPGRADES, new ObjectArrayList<>())
             .add("impact", OriginsDataTypes.IMPACT, Impact.NONE)
             .add("name", SerializableDataTypes.TEXT, null)
             .add("description", SerializableDataTypes.TEXT, null)
@@ -53,7 +53,6 @@ public class Origin implements Comparable<Origin>, Validatable {
             data.get("id"),
             data.get("icon"),
             data.get("powers"),
-            data.get("upgrades"),
             data.get("impact"),
             data.get("name"),
             data.get("description"),
@@ -64,7 +63,6 @@ public class Origin implements Comparable<Origin>, Validatable {
             .set("id", origin.getId())
             .set("icon", origin.getDisplayItem())
             .set("powers", origin.getPowerReferences())
-            .set("upgrades", origin.upgrades)
             .set("impact", origin.getImpact())
             .set("name", origin.getName())
             .set("description", origin.getDescription())
@@ -82,7 +80,6 @@ public class Origin implements Comparable<Origin>, Validatable {
     //  TODO: Allow users to modify the window textures via data packs
     //        (delayed since it's already pre-release/release)  -eggohito
     private final GuiMetadata guiMetadata;
-    private final List<OriginUpgrade> upgrades;
     private final Impact impact;
 
     private final Component name;
@@ -91,7 +88,7 @@ public class Origin implements Comparable<Origin>, Validatable {
     private final boolean choosable;
     private final int order;
 
-    protected Origin(Identifier id, Supplier<ItemStack> icon, List<PowerReference> powerReferences, GuiMetadata guiMetadata, List<OriginUpgrade> upgrades, Impact impact, @Nullable Component name, @Nullable Component description, boolean unchoosable, int order) {
+    protected Origin(Identifier id, Supplier<ItemStack> icon, List<PowerReference> powerReferences, GuiMetadata guiMetadata, Impact impact, @Nullable Component name, @Nullable Component description, boolean unchoosable, int order) {
 
         this.id = id;
         String baseTranslationKey = Util.makeDescriptionId("origin", id);
@@ -100,7 +97,6 @@ public class Origin implements Comparable<Origin>, Validatable {
         this.powerReferences = new ObjectLinkedOpenHashSet<>(powerReferences);
         this.powers = new ObjectLinkedOpenHashSet<>();
         this.guiMetadata = guiMetadata;
-        this.upgrades = upgrades;
         this.impact = impact;
         this.name = TextUtil.forceTranslatable(baseTranslationKey + ".name", Optional.ofNullable(name));
         this.description = TextUtil.forceTranslatable(baseTranslationKey + ".description", Optional.ofNullable(description));
@@ -110,16 +106,16 @@ public class Origin implements Comparable<Origin>, Validatable {
     }
 
     protected Origin(Identifier id, Supplier<ItemStack> icon, Impact impact, int order) {
-        this(id, icon, List.of(), GuiMetadata.DEFAULT, List.of(), impact, null, null, false, order);
+        this(id, icon, List.of(), GuiMetadata.DEFAULT, impact, null, null, false, order);
         SPECIALS.add(this);
     }
 
-    public static Origin of(Identifier id, ItemStack icon, List<PowerReference> powers, GuiMetadata windowTextures, List<OriginUpgrade> upgrades, Impact impact, @Nullable Component name, @Nullable Component description, boolean unchoosable, int order) {
-        return new Origin(id, () -> icon, powers, windowTextures, upgrades, impact, name, description,  unchoosable, order);
+    public static Origin of(Identifier id, ItemStack icon, List<PowerReference> powers, GuiMetadata windowTextures, Impact impact, @Nullable Component name, @Nullable Component description, boolean unchoosable, int order) {
+        return new Origin(id, () -> icon, powers, windowTextures, impact, name, description,  unchoosable, order);
     }
 
-    public static Origin of(Identifier id, ItemStack icon, List<PowerReference> powers, List<OriginUpgrade> upgrades, Impact impact, @Nullable Component name, @Nullable Component description, boolean unchoosable, int order) {
-        return new Origin(id, () -> icon, powers, GuiMetadata.DEFAULT, upgrades, impact, name, description,  unchoosable, order);
+    public static Origin of(Identifier id, ItemStack icon, List<PowerReference> powers, Impact impact, @Nullable Component name, @Nullable Component description, boolean unchoosable, int order) {
+        return new Origin(id, () -> icon, powers, GuiMetadata.DEFAULT, impact, name, description,  unchoosable, order);
     }
 
     //  TODO: Add a config that determines how origins should be sorted -eggohito
@@ -149,18 +145,6 @@ public class Origin implements Comparable<Origin>, Validatable {
 
     public GuiMetadata getGuiMetadata() {
         return guiMetadata;
-    }
-
-    @Deprecated(forRemoval = true)
-    public Optional<OriginUpgrade> getUpgrade(AdvancementHolder advancement) {
-        return upgrades.stream()
-            .filter(ou -> ou.advancementCondition().equals(advancement.id()))
-            .findFirst();
-    }
-
-    @Deprecated(forRemoval = true)
-    public boolean hasUpgrade() {
-        return !this.upgrades.isEmpty();
     }
 
     public Impact getImpact() {
@@ -249,13 +233,13 @@ public class Origin implements Comparable<Origin>, Validatable {
     }
 
     public static Map<OriginLayer, Origin> get(Entity entity) {
-        if(entity instanceof PlayerEntity) {
-            return get((PlayerEntity)entity);
+        if(entity instanceof Player) {
+            return get((Player)entity);
         }
         return new HashMap<>();
     }
 
-    public static Map<OriginLayer, Origin> get(PlayerEntity player) {
+    public static Map<OriginLayer, Origin> get(Player player) {
         return ModComponents.ORIGIN.get(player).getOrigins();
     }
 

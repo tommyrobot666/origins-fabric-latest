@@ -9,7 +9,6 @@ import io.github.apace100.calio.data.SerializableDataType;
 import io.github.apace100.calio.data.SerializableDataTypes;
 import io.github.apace100.origins.origin.Impact;
 import io.github.apace100.origins.origin.OriginLayer;
-import io.github.apace100.origins.origin.OriginUpgrade;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,12 +16,6 @@ import java.util.Optional;
 public final class OriginsDataTypes {
 
     public static final SerializableDataType<Impact> IMPACT = SerializableDataType.enumValue(Impact.class);
-
-    @Deprecated(forRemoval = true)
-    public static final SerializableDataType<OriginUpgrade> UPGRADE = OriginUpgrade.DATA_TYPE;
-
-    @Deprecated(forRemoval = true)
-    public static final SerializableDataType<List<OriginUpgrade>> UPGRADES = UPGRADE.list();
 
     public static final SerializableDataType<OriginLayer.ConditionedOrigin> CONDITIONED_ORIGIN = OriginLayer.ConditionedOrigin.DATA_TYPE;
 

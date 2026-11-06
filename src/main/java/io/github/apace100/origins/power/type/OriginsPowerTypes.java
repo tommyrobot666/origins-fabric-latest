@@ -4,7 +4,7 @@ import io.github.apace100.apoli.power.PowerConfiguration;
 import io.github.apace100.apoli.power.type.PowerType;
 import io.github.apace100.apoli.registry.ApoliRegistries;
 import io.github.apace100.origins.Origins;
-import net.minecraft.registry.Registry;
+import net.minecraft.core.Registry;
 
 public class OriginsPowerTypes {
 

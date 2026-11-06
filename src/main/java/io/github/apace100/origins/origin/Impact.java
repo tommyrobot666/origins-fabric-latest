@@ -1,27 +1,27 @@
 package io.github.apace100.origins.origin;
 
 import io.github.apace100.origins.Origins;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.Identifier;
 
 public enum Impact {
 	
-	NONE(0, "none", Formatting.GRAY, Origins.identifier("choose_origin/impact/none")),
-	LOW(1, "low", Formatting.GREEN, Origins.identifier("choose_origin/impact/low")),
-	MEDIUM(2, "medium", Formatting.YELLOW, Origins.identifier("choose_origin/impact/medium")),
-	HIGH(3, "high", Formatting.RED, Origins.identifier("choose_origin/impact/high"));
+	NONE(0, "none", ChatFormatting.GRAY, Origins.identifier("choose_origin/impact/none")),
+	LOW(1, "low", ChatFormatting.GREEN, Origins.identifier("choose_origin/impact/low")),
+	MEDIUM(2, "medium", ChatFormatting.YELLOW, Origins.identifier("choose_origin/impact/medium")),
+	HIGH(3, "high", ChatFormatting.RED, Origins.identifier("choose_origin/impact/high"));
 
 	public static final int WIDTH = 28;
 	public static final int HEIGHT = 8;
 
 	private final int impactValue;
 	private final String translationKey;
-	private final Formatting textStyle;
+	private final ChatFormatting textStyle;
 	private final Identifier spriteId;
 
-	Impact(int impactValue, String translationKey, Formatting textStyle, Identifier spriteId) {
+	Impact(int impactValue, String translationKey, ChatFormatting textStyle, Identifier spriteId) {
 		this.translationKey = "origins.gui.impact." + translationKey;
 		this.impactValue = impactValue;
 		this.textStyle = textStyle;
@@ -40,12 +40,12 @@ public enum Impact {
 		return translationKey;
 	}
 	
-	public Formatting getTextStyle() {
+	public ChatFormatting getTextStyle() {
 		return textStyle;
 	}
 	
-	public MutableText getTextComponent() {
-		return Text.translatable(getTranslationKey()).formatted(getTextStyle());
+	public MutableComponent getTextComponent() {
+		return Component.translatable(getTranslationKey()).withStyle(getTextStyle());
 	}
 	
 	public static Impact getByValue(int impactValue) {

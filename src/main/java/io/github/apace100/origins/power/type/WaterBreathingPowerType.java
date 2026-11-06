@@ -7,10 +7,10 @@ import io.github.apace100.apoli.power.PowerConfiguration;
 import io.github.apace100.apoli.power.type.PowerType;
 import io.github.apace100.origins.mixin.LivingEntityAccessor;
 import io.github.apace100.origins.registry.ModDamageTypes;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.tag.FluidTags;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
@@ -27,9 +27,9 @@ public class WaterBreathingPowerType extends PowerType {
     }
 
     public static boolean shouldDrown(LivingEntity entity) {
-        return !entity.isSubmergedIn(FluidTags.WATER)
-            && !entity.hasStatusEffect(StatusEffects.WATER_BREATHING)
-            && !entity.hasStatusEffect(StatusEffects.CONDUIT_POWER);
+        return !entity.isEyeInFluid(FluidTags.WATER)
+            && !entity.hasEffect(MobEffects.WATER_BREATHING)
+            && !entity.hasEffect(MobEffects.CONDUIT_POWER);
     }
 
     public static void tick(LivingEntity entity) {
@@ -41,18 +41,18 @@ public class WaterBreathingPowerType extends PowerType {
         LivingEntityAccessor entityAccess = (LivingEntityAccessor) entity;
         if (WaterBreathingPowerType.shouldDrown(entity)) {
 
-            int landGain = entityAccess.callGetNextAirOnLand(0);
-            int landLoss = entityAccess.callGetNextAirUnderwater(entity.getAir());
+            int landGain = entityAccess.callIncreaseAirSupply(0);
+            int landLoss = entityAccess.callDecreaseAirSupply(entity.getAirSupply());
 
-            if (!((EntityAccessor) entity).callIsBeingRainedOn()) {
+            if (!((EntityAccessor) entity).callIsInRain()) {
 
-                entity.setAir(landLoss - landGain);
-                if (entity.getAir() != -20) {
+                entity.setAirSupply(landLoss - landGain);
+                if (entity.getAirSupply() != -20) {
                     return;
                 }
 
-                entity.setAir(0);
-                entity.damage(entity.getDamageSources().create(ModDamageTypes.NO_WATER_FOR_GILLS), 2.0F);
+                entity.setAirSupply(0);
+                entity.hurt(entity.damageSources().source(ModDamageTypes.NO_WATER_FOR_GILLS), 2.0F);
 
                 for (int i = 0; i < 8; ++i) {
 
@@ -60,20 +60,20 @@ public class WaterBreathingPowerType extends PowerType {
                     double dy = entity.getRandom().nextDouble() - entity.getRandom().nextDouble();
                     double dz = entity.getRandom().nextDouble() - entity.getRandom().nextDouble();
 
-                    entity.getWorld().addParticle(ParticleTypes.BUBBLE, entity.getParticleX(0.5), entity.getEyeHeight(entity.getPose()), entity.getParticleZ(0.5), dx * 0.5, dy * 0.5 + 0.25, dz * 0.5);
+                    entity.level().addParticle(ParticleTypes.BUBBLE, entity.getRandomX(0.5), entity.getEyeHeight(entity.getPose()), entity.getRandomZ(0.5), dx * 0.5, dy * 0.5 + 0.25, dz * 0.5);
 
                 }
 
             }
 
             else {
-                entity.setAir(entity.getAir() - landGain);
+                entity.setAirSupply(entity.getAirSupply() - landGain);
             }
 
         }
 
-        else if (entity.getAir() < entity.getMaxAir()) {
-            entity.setAir(entityAccess.callGetNextAirOnLand(entity.getAir()));
+        else if (entity.getAirSupply() < entity.getMaxAirSupply()) {
+            entity.setAirSupply(entityAccess.callIncreaseAirSupply(entity.getAirSupply()));
         }
 
     }

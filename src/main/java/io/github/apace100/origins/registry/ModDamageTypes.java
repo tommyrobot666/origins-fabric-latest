@@ -1,12 +1,12 @@
 package io.github.apace100.origins.registry;
 
 import io.github.apace100.origins.Origins;
-import net.minecraft.entity.damage.DamageType;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.damagesource.DamageType;
 
 public class ModDamageTypes {
 
-    public static final RegistryKey<DamageType> NO_WATER_FOR_GILLS = RegistryKey.of(RegistryKeys.DAMAGE_TYPE, Origins.identifier("no_water_for_gills"));
+    public static final ResourceKey<DamageType> NO_WATER_FOR_GILLS = ResourceKey.create(Registries.DAMAGE_TYPE, Origins.identifier("no_water_for_gills"));
 
 }

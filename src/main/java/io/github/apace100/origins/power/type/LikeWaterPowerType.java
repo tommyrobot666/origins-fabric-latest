@@ -5,8 +5,8 @@ import io.github.apace100.apoli.component.PowerHolderComponent;
 import io.github.apace100.apoli.condition.EntityCondition;
 import io.github.apace100.apoli.power.PowerConfiguration;
 import io.github.apace100.apoli.power.type.PowerType;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
@@ -22,15 +22,15 @@ public class LikeWaterPowerType extends PowerType {
         return OriginsPowerTypes.LIKE_WATER;
     }
 
-    public static Vec3d modify(Entity entity, Vec3d motion) {
+    public static Vec3 modify(Entity entity, Vec3 motion) {
         return doesApply(entity, motion)
-            ? new Vec3d(motion.getX(), 0, motion.getZ())
+            ? new Vec3(motion.x(), 0, motion.z())
             : motion;
     }
 
-    private static boolean doesApply(Entity entity, Vec3d motion) {
-        return Math.abs(motion.getY()) < 0.025
-            && Iterables.isEmpty(entity.getWorld().getBlockCollisions(entity, entity.getBoundingBox().stretch(0.0, motion.getY(), 0.0)))
+    private static boolean doesApply(Entity entity, Vec3 motion) {
+        return Math.abs(motion.y()) < 0.025
+            && Iterables.isEmpty(entity.level().getBlockCollisions(entity, entity.getBoundingBox().expandTowards(0.0, motion.y(), 0.0)))
             && PowerHolderComponent.hasPowerType(entity, LikeWaterPowerType.class);
     }
 
