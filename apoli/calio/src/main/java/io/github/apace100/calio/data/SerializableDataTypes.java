@@ -18,6 +18,8 @@ import net.fabricmc.fabric.api.recipe.v1.ingredient.CustomIngredient;
 import net.fabricmc.fabric.impl.recipe.ingredient.CustomIngredientImpl;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.*;
@@ -27,11 +29,14 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -278,21 +283,21 @@ public final class SerializableDataTypes {
 	);
 
 	/**
-	 * 	<p>A data type for decoding/encoding a {@link Ingredient.Entry} formatted as a string, either with a {@code #} prefix
+	 * 	<p>A data type for decoding/encoding a {@link Holder<Item>} formatted as a string, either with a {@code #} prefix
 	 * 	 (to define an item tag, e.g: {@code #minecraft:meat}) or no prefix (to define an item,
 	 * 	 e.g: {@code minecraft:diamond}).</p>
 	 *
 	 * 	 <p>This data type also allows for defining an empty item stack entry (e.g: {@code minecraft:air}), compared to
-	 * 	 {@link Ingredient.Entry#CODEC}, which doesn't.</p>
+	 * 	 {@link Holder<Item>#CODEC}, which doesn't.</p>
 	 */
-	public static final SerializableDataType<Ingredient.Entry> INLINE_INGREDIENT_ENTRY = SerializableDataType.of(
+	public static final SerializableDataType<Holder<Item>> INLINE_INGREDIENT_ENTRY = SerializableDataType.of(
 		new Codec<>() {
 
 			@Override
-			public <T> DataResult<Pair<Ingredient.Entry, T>> decode(DynamicOps<T> ops, T input) {
+			public <T> DataResult<Pair<Holder<Item>, T>> decode(DynamicOps<T> ops, T input) {
 				return ops.getStringValue(input).flatMap(stringInput -> {
 
-					DataResult<Pair<Ingredient.Entry, T>> stackResult = INLINE_INGREDIENT_STACK_ENTRY
+					DataResult<Pair<Holder<Item>, T>> stackResult = INLINE_INGREDIENT_STACK_ENTRY
 						.read(ops, input)
 						.map(entry -> Pair.of(entry, input));
 
@@ -300,7 +305,7 @@ public final class SerializableDataTypes {
 						return stackResult;
 					}
 
-					DataResult<Pair<Ingredient.Entry, T>> tagResult = INLINE_INGREDIENT_TAG_ENTRY
+					DataResult<Pair<Holder<Item>, T>> tagResult = INLINE_INGREDIENT_TAG_ENTRY
 						.read(ops, input)
 						.map(entry -> Pair.of(entry, input));
 
@@ -321,7 +326,7 @@ public final class SerializableDataTypes {
 			}
 
 			@Override
-			public <T> DataResult<T> encode(Ingredient.Entry input, DynamicOps<T> ops, T prefix) {
+			public <T> DataResult<T> encode(Holder<Item> input, DynamicOps<T> ops, T prefix) {
 				return switch (input) {
 					case Ingredient.StackEntry stackEntry ->
 						INLINE_INGREDIENT_STACK_ENTRY.codec().encode(stackEntry, ops, prefix);
@@ -362,16 +367,16 @@ public final class SerializableDataTypes {
 	);
 
 	/**
-	 * 	<p>A data type for decoding/encoding a {@link Ingredient.Entry} formatted as an object with a {@code tag} key
+	 * 	<p>A data type for decoding/encoding a {@link Holder<Item>} formatted as an object with a {@code tag} key
 	 * 	(to define an item tag, e.g: {@code {"tag": "minecraft:meat"}}) or an {@code item} key (to define an item, e.g:
 	 * 	{@code {"item": "minecraft:diamond"}}</p>
 	 *
 	 * 	 <p>This data type also allows for defining an empty item stack entry (e.g: {@code minecraft:air}), compared to
-	 * 	 {@link Ingredient.Entry#CODEC}, which doesn't. This is <b>deprecated</b> in favor of using
+	 * 	 {@link Holder<Item>#CODEC}, which doesn't. This is <b>deprecated</b> in favor of using
 	 * 	 {@link #INLINE_INGREDIENT_ENTRY} since vanilla will use a similar format in the future.</p>
 	 */
 	@Deprecated(since = "1.14.0-alpha.7")
-	public static final SerializableDataType<Ingredient.Entry> OBJECT_INGREDIENT_ENTRY = SerializableDataType.compound(
+	public static final SerializableDataType<Holder<Item>> OBJECT_INGREDIENT_ENTRY = SerializableDataType.compound(
 		new SerializableData()
 			.add("item", ITEM, null)
 			.add("tag", ITEM_TAG, null)
@@ -419,15 +424,15 @@ public final class SerializableDataTypes {
 	);
 
 	/**
-	 * 	A data type for decoding/encoding an {@link Ingredient.Entry} either as an object or a string.
+	 * 	A data type for decoding/encoding an {@link Holder<Item>} either as an object or a string.
 	 * 	@see #INLINE_INGREDIENT_ENTRY
 	 *  @see #OBJECT_INGREDIENT_ENTRY
 	 */
-    public static final SerializableDataType<Ingredient.Entry> INGREDIENT_ENTRY = SerializableDataType.recursive(dataType -> SerializableDataType.of(
+    public static final SerializableDataType<Holder<Item>> INGREDIENT_ENTRY = SerializableDataType.recursive(dataType -> SerializableDataType.of(
 		new Codec<>() {
 
 			@Override
-			public <T> DataResult<Pair<Ingredient.Entry, T>> decode(DynamicOps<T> ops, T input) {
+			public <T> DataResult<Pair<Holder<Item>, T>> decode(DynamicOps<T> ops, T input) {
 
 				if (ops.getMap(input).isSuccess()) {
 					return OBJECT_INGREDIENT_ENTRY.setRoot(dataType.isRoot()).codec().decode(ops, input);
@@ -440,7 +445,7 @@ public final class SerializableDataTypes {
 			}
 
 			@Override
-			public <T> DataResult<T> encode(Ingredient.Entry input, DynamicOps<T> ops, T prefix) {
+			public <T> DataResult<T> encode(Holder<Item> input, DynamicOps<T> ops, T prefix) {
 				return INLINE_INGREDIENT_ENTRY.codec().encode(input, ops, prefix);
 			}
 
@@ -448,9 +453,9 @@ public final class SerializableDataTypes {
 		INLINE_INGREDIENT_ENTRY.packetCodec()
 	));
 
-    public static final SerializableDataType<List<Ingredient.Entry>> INGREDIENT_ENTRIES = INGREDIENT_ENTRY.list(1, Integer.MAX_VALUE);
+    public static final SerializableDataType<List<Holder<Item>>> INGREDIENT_ENTRIES = INGREDIENT_ENTRY.list(1, Integer.MAX_VALUE);
 
-	private static final SerializableDataType<Ingredient.Entry[]> INGREDIENT_ENTRIES_ARRAY = INGREDIENT_ENTRIES.xmap(entries -> entries.toArray(Ingredient.Entry[]::new), ObjectArrayList::new);
+	private static final SerializableDataType<Holder<Item>[]> INGREDIENT_ENTRIES_ARRAY = INGREDIENT_ENTRIES.xmap(entries -> entries.toArray(Holder<Item>[]::new), ObjectArrayList::new);
 
     @SuppressWarnings("UnstableApiUsage")
 	private static final Codec<CustomIngredient> CUSTOM_INGREDIENT_CODEC = CustomIngredientImpl.CODEC.dispatch(
@@ -562,27 +567,27 @@ public final class SerializableDataTypes {
 
     public static final SerializableDataType<ParticleType<?>> PARTICLE_TYPE = SerializableDataType.registry(Registries.PARTICLE_TYPE);
 
-    public static final SerializableDataType<NbtElement> NBT_ELEMENT = SerializableDataType.of(
+    public static final SerializableDataType<Tag> NBT_ELEMENT = SerializableDataType.of(
         Codec.PASSTHROUGH.xmap(dynamic -> dynamic.convert(NbtOps.INSTANCE).getValue(), nbtElement -> new Dynamic<>(NbtOps.INSTANCE, nbtElement.copy())),
-        ByteBufCodecs.nbt(NbtSizeTracker::ofUnlimitedBytes).cast()
+        ByteBufCodecs.tagCodec(NbtAccounter::ofUnlimitedBytes).cast()
     );
 
-    public static final SerializableDataType<NbtCompound> NBT_COMPOUND = SerializableDataType.of(Codec.withAlternative(NbtCompound.CODEC, StringNbtReader.NBT_COMPOUND_CODEC), ByteBufCodecs.nbtCompound(NbtSizeTracker::ofUnlimitedBytes).cast());
+    public static final SerializableDataType<CompoundTag> NBT_COMPOUND = SerializableDataType.of(Codec.withAlternative(CompoundTag.CODEC, StringNbtReader.NBT_COMPOUND_CODEC), ByteBufCodecs.compoundTagCodec(NbtAccounter::ofUnlimitedBytes).cast());
 
     public static final SerializableDataType<ArgumentWrapper<NbtPathArgumentType.NbtPath>> NBT_PATH = SerializableDataType.argumentType(NbtPathArgumentType.nbtPath());
 
-    public static final CompoundSerializableDataType<ParticleEffect> PARTICLE_EFFECT = new CompoundSerializableDataType<>(
+    public static final CompoundSerializableDataType<ParticleOptions> PARTICLE_EFFECT = new CompoundSerializableDataType<>(
 		new SerializableData()
 			.add("type", PARTICLE_TYPE)
-			.add("params", NBT_COMPOUND, new NbtCompound()),
+			.add("params", NBT_COMPOUND, new CompoundTag()),
 		serializableData -> new MapCodec<>() {
 
 			@Override
-			public <T> DataResult<ParticleEffect> decode(DynamicOps<T> ops, MapLike<T> input) {
+			public <T> DataResult<ParticleOptions> decode(DynamicOps<T> ops, MapLike<T> input) {
 				return serializableData.decode(ops, input).flatMap(data -> {
 
 					ParticleType<?> particleType = data.get("type");
-					NbtCompound paramsNbt = data.get("params");
+					CompoundTag paramsNbt = data.get("params");
 
 					Identifier particleTypeId = Objects.requireNonNull(Registries.PARTICLE_TYPE.getId(particleType), "Particle type (" + particleType + ") is not registered?");
 					paramsNbt.putString("type", particleTypeId.toString());
@@ -607,7 +612,7 @@ public final class SerializableDataTypes {
 			}
 
 			@Override
-			public <T> RecordBuilder<T> encode(ParticleEffect input, DynamicOps<T> ops, RecordBuilder<T> prefix) {
+			public <T> RecordBuilder<T> encode(ParticleOptions input, DynamicOps<T> ops, RecordBuilder<T> prefix) {
 
 				ParticleType<?> particleType = input.getType();
 				Identifier particleTypeId = Objects.requireNonNull(Registries.PARTICLE_TYPE.getId(particleType), "Particle type (" + particleType + ") is not registered?");
@@ -623,7 +628,7 @@ public final class SerializableDataTypes {
 					RegistryOps<NbtElement> nbtOps = registryOps.withDelegate(NbtOps.INSTANCE);
 
 					return prefix.add("params", ParticleTypes.TYPE_CODEC.encodeStart(nbtOps, input)
-						.flatMap(nbtElement -> nbtElement instanceof NbtCompound nbtCompound ? DataResult.success(nbtCompound) : DataResult.error(() -> "Not a compound tag: " + nbtElement))
+						.flatMap(nbtElement -> nbtElement instanceof CompoundTag nbtCompound ? DataResult.success(nbtCompound) : DataResult.error(() -> "Not a compound tag: " + nbtElement))
 						.ifSuccess(nbtCompound -> nbtCompound.remove("type"))
 						.map(nbtCompound -> nbtOps.convertTo(ops, nbtCompound)));
 
@@ -644,13 +649,13 @@ public final class SerializableDataTypes {
 		serializableData -> ParticleTypes.PACKET_CODEC.cast()
 	);
 
-    public static final SerializableDataType<ParticleEffect> PARTICLE_EFFECT_OR_TYPE = SerializableDataType.recursive(self -> {
-		SerializableDataType<ParticleEffect> dataType = PARTICLE_EFFECT.setRoot(self.isRoot());
+    public static final SerializableDataType<ParticleOptions> PARTICLE_EFFECT_OR_TYPE = SerializableDataType.recursive(self -> {
+		SerializableDataType<ParticleOptions> dataType = PARTICLE_EFFECT.setRoot(self.isRoot());
 		return SerializableDataType.of(
 			new Codec<>() {
 
 				@Override
-				public <T> DataResult<Pair<ParticleEffect, T>> decode(DynamicOps<T> ops, T input) {
+				public <T> DataResult<Pair<ParticleOptions, T>> decode(DynamicOps<T> ops, T input) {
 
 					if (ops.getStringValue(input).isSuccess()) {
 						return PARTICLE_TYPE.codec().parse(ops, input)
@@ -667,7 +672,7 @@ public final class SerializableDataTypes {
 				}
 
 				@Override
-				public <T> DataResult<T> encode(ParticleEffect input, DynamicOps<T> ops, T prefix) {
+				public <T> DataResult<T> encode(ParticleOptions input, DynamicOps<T> ops, T prefix) {
 					return dataType.codec().encode(input, ops, prefix);
 				}
 

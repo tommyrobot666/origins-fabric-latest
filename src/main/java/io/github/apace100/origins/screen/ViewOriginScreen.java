@@ -5,13 +5,13 @@ import io.github.apace100.origins.origin.Origin;
 import io.github.apace100.origins.origin.OriginLayer;
 import io.github.apace100.origins.registry.ModComponents;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ProfileComponent;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.PlayerHeadItem;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.PlayerHeadItem;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -26,11 +26,12 @@ public class ViewOriginScreen extends OriginDisplayScreen {
 	private int index = 0;
 
 	public ViewOriginScreen() {
-		super(Text.empty(), false);
+		super(Component.empty(), false);
 	}
 
 	@Override
 	protected void init() {
+		Minecraft client = Minecraft.getInstance();
 
 		super.init();
 		assert client != null && client.player != null : "Tried initializing the view origin screen with the client and its player unset!";
@@ -50,14 +51,14 @@ public class ViewOriginScreen extends OriginDisplayScreen {
 			ItemStack icon = origin.getDisplayItem();
 			this.entries.add(new Entry(layer, origin));
 
-			if (icon.getItem() instanceof PlayerHeadItem &icon.contains(DataComponentTypes.PROFILE)) {
-				icon.set(DataComponentTypes.PROFILE, new ProfileComponent(client.player.getGameProfile()));
+			if (icon.getItem() instanceof PlayerHeadItem && !icon.has(DataComponents.PROFILE)) {
+				icon.set(DataComponents.PROFILE, client.player.getProfile());
 			}
 
 		}
 
-		this.addDrawableChild(ButtonWidget.builder(Text.translatable("origins.gui.close"), button -> Objects.requireNonNull(client).setScreen(null))
-			.position(windowWidget.getX() + windowWidget.getWidth() / 2 - 50, windowWidget.getY() + windowWidget.getHeight() + 5)
+		this.addRenderableWidget(Button.builder(Component.translatable("origins.gui.close"), button -> Objects.requireNonNull(client).gui.setScreen(null))
+			.pos(windowWidget.getX() + windowWidget.getWidth() / 2 - 50, windowWidget.getY() + windowWidget.getHeight() + 5)
 			.size(100, 20)
 			.build());
 
@@ -72,19 +73,19 @@ public class ViewOriginScreen extends OriginDisplayScreen {
 			return;
 		}
 
-		this.addDrawableChild(ButtonWidget.builder(Text.literal("<"), button -> this.previousLayer())
-			.position(windowWidget.getX() - 40, height / 2 - 10)
+		this.addRenderableWidget(Button.builder(Component.literal("<"), button -> this.previousLayer())
+			.pos(windowWidget.getX() - 40, height / 2 - 10)
 			.size(20, 20)
 			.build());
-		this.addDrawableChild(ButtonWidget.builder(Text.literal(">"), button -> this.nextLayer())
-			.position(windowWidget.getX() + windowWidget.getWidth() + 20, height / 2 - 10)
+		this.addRenderableWidget(Button.builder(Component.literal(">"), button -> this.nextLayer())
+			.pos(windowWidget.getX() + windowWidget.getWidth() + 20, height / 2 - 10)
 			.size(20, 20)
 			.build());
 
 	}
 
 	@Override
-	public Text getTitle() {
+	public Component getTitle() {
 
 		if (entries.isEmpty()) {
 			return super.getTitle();
@@ -115,12 +116,12 @@ public class ViewOriginScreen extends OriginDisplayScreen {
 	}
 
 	void nextLayer() {
-		this.index = MathHelper.floorMod(index + 1, this.entries.size());
+		this.index = Mth.positiveModulo(index + 1, this.entries.size());
 		this.resetAndShowCurrent();
 	}
 
 	void previousLayer() {
-		this.index = MathHelper.floorMod(index - 1, this.entries.size());
+		this.index = Mth.positiveModulo(index - 1, this.entries.size());
 		this.resetAndShowCurrent();
 	}
 

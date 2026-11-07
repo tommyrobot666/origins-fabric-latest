@@ -7,13 +7,13 @@ import io.github.apace100.origins.origin.OriginLayer;
 import io.github.apace100.origins.origin.OriginManager;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.ProfileComponent;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.PlayerHeadItem;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.PlayerHeadItem;
 
 import java.util.List;
 import java.util.Objects;
@@ -29,9 +29,9 @@ public class ChooseOriginScreen extends OriginDisplayScreen {
 	private int optionCount;
 
 	protected ChooseOriginScreen(List<OriginLayer> layers, int layerIndex, boolean showDirtBackground) {
-		super(Text.empty(), showDirtBackground);
+		super(Component.empty(), showDirtBackground);
 		this.layers = layers;
-		this.layerIndex = MathHelper.clamp(Math.abs(layerIndex), 0, layers.size());
+		this.layerIndex = Mth.clamp(Math.abs(layerIndex), 0, layers.size());
 	}
 
 	public ChooseOriginScreen(List<OriginLayer> layers, boolean showDirtBackground) {
@@ -45,6 +45,7 @@ public class ChooseOriginScreen extends OriginDisplayScreen {
 
 	@Override
 	protected void init() {
+		Minecraft client = Minecraft.getInstance();
 
 		super.init();
 		assert client != null && client.player != null : "Tried initializing the choose origin screen with the client and its player unset!";
@@ -68,8 +69,8 @@ public class ChooseOriginScreen extends OriginDisplayScreen {
 
 				if (origin.isChoosable()) {
 
-					if (icon.getItem() instanceof PlayerHeadItem && !icon.contains(DataComponentTypes.PROFILE)) {
-						icon.set(DataComponentTypes.PROFILE, new ProfileComponent(client.player.getGameProfile()));
+					if (icon.getItem() instanceof PlayerHeadItem && !icon.has(DataComponents.PROFILE)) {
+						icon.set(DataComponents.PROFILE, client.player.getProfile());
 					}
 
 					origins.add(origin);
@@ -91,8 +92,8 @@ public class ChooseOriginScreen extends OriginDisplayScreen {
 
 			else {
 
-				this.addDrawableChild(ButtonWidget.builder(Text.translatable("origins.gui.select"), button -> this.selectOrigin())
-					.position(windowWidget.getX() + windowWidget.getWidth() / 2 - 50, windowWidget.getY() + windowWidget.getHeight() + 5)
+				this.addRenderableWidget(Button.builder(Component.translatable("origins.gui.select"), button -> this.selectOrigin())
+					.pos(windowWidget.getX() + windowWidget.getWidth() / 2 - 50, windowWidget.getY() + windowWidget.getHeight() + 5)
 					.size(100, 20)
 					.build());
 
@@ -100,12 +101,12 @@ public class ChooseOriginScreen extends OriginDisplayScreen {
 
 				if (optionCount > 1) {
 
-					this.addDrawableChild(ButtonWidget.builder(Text.literal("<"), button -> this.previousOrigin())
-						.position(windowWidget.getX() - 40, height / 2 - 10)
+					this.addRenderableWidget(Button.builder(Component.literal("<"), button -> this.previousOrigin())
+						.pos(windowWidget.getX() - 40, height / 2 - 10)
 						.size(20, 20)
 						.build());
-					this.addDrawableChild(ButtonWidget.builder(Text.literal(">"), button -> this.nextOrigin())
-						.position(windowWidget.getX() + windowWidget.getWidth() + 20, height / 2 - 10)
+					this.addRenderableWidget(Button.builder(Component.literal(">"), button -> this.nextOrigin())
+						.pos(windowWidget.getX() + windowWidget.getWidth() + 20, height / 2 - 10)
 						.size(20, 20)
 						.build());
 
@@ -118,7 +119,7 @@ public class ChooseOriginScreen extends OriginDisplayScreen {
 	}
 
 	@Override
-	public Text getTitle() {
+	public Component getTitle() {
 
 		if (layers.isEmpty()) {
 			return super.getTitle();
@@ -141,7 +142,7 @@ public class ChooseOriginScreen extends OriginDisplayScreen {
 	}
 
 	protected void waitForNextLayer() {
-		Objects.requireNonNull(client).setScreen(new WaitForNextLayerScreen(layers, layerIndex, showDirtBackground));
+		Objects.requireNonNull(Minecraft.getInstance()).gui.setScreen(new WaitForNextLayerScreen(layers, layerIndex, showDirtBackground));
 	}
 
 	void selectOrigin() {
@@ -170,12 +171,12 @@ public class ChooseOriginScreen extends OriginDisplayScreen {
 	}
 
 	void nextOrigin() {
-		this.originIndex = MathHelper.floorMod(originIndex + 1, optionCount);
+		this.originIndex = Mth.positiveModulo(originIndex + 1, optionCount);
 		this.resetAndShowCurrent();
 	}
 
 	void previousOrigin() {
-		this.originIndex = MathHelper.floorMod(originIndex - 1, optionCount);
+		this.originIndex = Mth.positiveModulo(originIndex - 1, optionCount);
 		this.resetAndShowCurrent();
 	}
 

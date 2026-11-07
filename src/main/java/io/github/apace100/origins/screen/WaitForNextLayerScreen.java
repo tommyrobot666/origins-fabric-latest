@@ -4,7 +4,10 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.apace100.origins.component.OriginComponent;
 import io.github.apace100.origins.origin.OriginLayer;
 import io.github.apace100.origins.registry.ModComponents;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 
 import java.util.List;
@@ -26,6 +29,7 @@ public class WaitForNextLayerScreen extends Screen {
 
     @Override
     protected void init() {
+        Minecraft client = Minecraft.getInstance();
 
         super.init();
         assert client != null && client.player != null;
@@ -35,34 +39,35 @@ public class WaitForNextLayerScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
 
         if (optionCount == 0) {
             nextOrClose();
         }
 
         else {
-            this.renderBackground(context, mouseX, mouseY, delta);
+            this.extractBackground(context, mouseX, mouseY, delta);
         }
 
     }
 
     @Override
-    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void extractBackground(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
 
         if (showDirtBackground) {
-            RenderSystem.enableBlend();
-            context.drawTexture(OriginDisplayScreen.DIRT_BACKGROUND, 0, 0, 0, 0.0F, 0.0F, this.width, this.height, 32, 32);
-            RenderSystem.disableBlend();
+//            RenderSystem.enableBlend();
+            context.blit(RenderPipelines.GUI_TEXTURED, OriginDisplayScreen.DIRT_BACKGROUND, 0, 0, 0.0F, 0.0F, this.width, this.height, 32, 32);
+//            RenderSystem.disableBlend();
         }
 
         else {
-            super.renderBackground(context, mouseX, mouseY, delta);
+            super.extractBackground(context, mouseX, mouseY, delta);
         }
 
     }
 
     public void nextOrClose() {
+        Minecraft client = Minecraft.getInstance();
 
         int layersCount = layers.size();
         assert client != null && client.player != null : "Tried iterating through " + layersCount + " layer(s) with the client and its player unset!";
@@ -75,13 +80,13 @@ public class WaitForNextLayerScreen extends Screen {
             layer = layers.get(index);
 
             if (!originComponent.hasOrigin(layer) && !layer.getOrigins(client.player).isEmpty()) {
-                client.setScreen(new ChooseOriginScreen(layers, index, showDirtBackground));
+                client.gui.setScreen(new ChooseOriginScreen(layers, index, showDirtBackground));
                 return;
             }
 
         }
 
-        client.setScreen(null);
+        client.gui.setScreen(null);
 
     }
 

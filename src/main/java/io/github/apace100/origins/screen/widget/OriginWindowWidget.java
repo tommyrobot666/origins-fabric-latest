@@ -16,9 +16,18 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectSortedSet;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractScrollArea;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -45,11 +54,11 @@ public class OriginWindowWidget extends AbstractScrollArea {
 
 	private OverlayContext overlayContext = OverlayContext.EMPTY;
 	@Nullable
-	private TextRenderer textRenderer;
+	private Font textRenderer;
 
 	private Origin.WindowTextures textures = Origin.WindowTextures.DEFAULT;
 	@Nullable
-	private MutableText randomOrigins;
+	private MutableComponent randomOrigins;
 
 	@Nullable
 	private Origin origin;
@@ -57,50 +66,52 @@ public class OriginWindowWidget extends AbstractScrollArea {
 	private OriginLayer layer;
 
 	public OriginWindowWidget() {
-		super(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, Text.empty());
+		super(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, Component.empty(),
+				defaultSettings(1));
 	}
 
 	@Override
-	public void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
+	public void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
 
 		this.overlayContext = new OverlayContext(mouseX, mouseY, delta);
 		this.lines = 0;
 
-		super.renderWidget(context, mouseX, mouseY + Math.round((float) this.getScrollY()), delta);
+		renderBackground(graphics);
+		renderContents(graphics, mouseX, mouseY, delta);
+		renderOverlay(graphics);
+
+//		super.extractWidgetRenderState(graphics, mouseX, mouseY + Math.round((float) this.scrollBarY()), delta);
 
 	}
 
 	@Override
-	protected void appendClickableNarrations(NarrationMessageBuilder builder) {
+	protected void updateWidgetNarration(NarrationElementOutput output) {
 
 	}
 
 	@Override
-	protected int getContentsHeight() {
+	protected int contentHeight() {
 		return lines * LINE_HEIGHT;
 	}
 
 	@Override
-	protected double getDeltaYPerScroll() {
-		return Screen.hasShiftDown() ? LINE_HEIGHT / 2.0 : LINE_HEIGHT;
+	protected double scrollRate() {
+		return Minecraft.getInstance().hasShiftDown() ? LINE_HEIGHT / 2.0 : LINE_HEIGHT;
 	}
 
-	@Override
-	protected void drawBox(DrawContext context) {
-		context.drawGuiTexture(textures.background(), this.getX(), this.getY(), this.getWidth(), this.getHeight());
+	protected void renderBackground(GuiGraphicsExtractor context) {
+		context.blitSprite(RenderPipelines.GUI_TEXTURED,textures.background(), this.getX(), this.getY(), this.getWidth(), this.getHeight());
 	}
 
-	@Override
-	protected void renderContents(DrawContext context, int mouseX, int mouseY, float delta) {
+	protected void renderContents(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
 		this.renderPowersAndBadges(context, mouseX, mouseY, delta);
 		this.renderNameAndImpact(context, mouseX, mouseY, delta);
 	}
 
-	@Override
-	protected void renderOverlay(DrawContext context) {
+	protected void renderOverlay(GuiGraphicsExtractor context) {
 
-		super.renderOverlay(context);
-		context.drawGuiTexture(textures.border(), this.getX(), this.getY(), 200, this.getWidth(), this.getHeight());
+//		super.renderOverlay(context);
+		context.blitSprite(RenderPipelines.GUI_TEXTURED,textures.border(), this.getX(), this.getY(), 200, this.getWidth(), this.getHeight());
 
 		if (textRenderer == null) {
 			return;
@@ -130,7 +141,7 @@ public class OriginWindowWidget extends AbstractScrollArea {
 		return this.getY() + (this.getHeight() / 2);
 	}
 
-	public void init(TextRenderer renderer) {
+	public void init(Font renderer) {
 		this.textRenderer = renderer;
 	}
 
@@ -141,13 +152,13 @@ public class OriginWindowWidget extends AbstractScrollArea {
 
 		if (origin == Origin.RANDOM) {
 
-			this.randomOrigins = Text.empty();
+			this.randomOrigins = Component.empty();
 
 			ObjectSortedSet<Origin> randoms = new ObjectAVLTreeSet<>(Origin::compareTo);
-			layer.getRandomOrigins(MinecraftClient.getInstance().player).forEach(id -> randoms.add(OriginManager.get(id)));
+			layer.getRandomOrigins(Minecraft.getInstance().player).forEach(id -> randoms.add(OriginManager.get(id)));
 
 			for (var random : randoms) {
-				this.randomOrigins.append(Text.of("\n")).append("- ").append(random.getName());
+				this.randomOrigins.append(Component.literal("\n")).append("- ").append(random.getName());
 			}
 
 		}
@@ -162,7 +173,7 @@ public class OriginWindowWidget extends AbstractScrollArea {
 
 	public void resetAndShow(@NotNull Origin origin, @NotNull OriginLayer layer, Function<Origin, Origin.@NotNull WindowTextures> texturesGetter) {
 		this.show(origin, layer, texturesGetter);
-		this.setScrollY(0.0);
+		this.setScrollAmount(0.0);
 	}
 
 	protected Collection<BadgeWidget> getBadgeWidgets(Power power) {
@@ -203,7 +214,7 @@ public class OriginWindowWidget extends AbstractScrollArea {
 
 	}
 
-	protected void renderPowersAndBadges(DrawContext context, int mouseX, int mouseY, float delta) {
+	protected void renderPowersAndBadges(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
 
 		if (textRenderer == null) {
 			return;
@@ -214,12 +225,12 @@ public class OriginWindowWidget extends AbstractScrollArea {
 
 		if (origin == null || layer == null) {
 
-			Text emptyOrNotInstalledText = OriginsClient.isServerRunningOrigins
-				? Text.translatable("origins.gui.view_origin.empty")
-				: Text.translatable("origins.gui.view_origin.not_installed");
+			Component emptyOrNotInstalledText = OriginsClient.isServerRunningOrigins
+				? Component.translatable("origins.gui.view_origin.empty")
+				: Component.translatable("origins.gui.view_origin.not_installed");
 
-			for (var line : textRenderer.wrapLines(emptyOrNotInstalledText, this.getTextMaxWidth())) {
-				context.drawCenteredTextWithShadow(textRenderer, line, this.getCenterX(), y, -1);
+			for (var line : textRenderer.split(emptyOrNotInstalledText, this.getTextMaxWidth())) {
+				context.centeredText(textRenderer, line, this.getCenterX(), y, -1);
 				y += LINE_HEIGHT;
 			}
 
@@ -227,13 +238,13 @@ public class OriginWindowWidget extends AbstractScrollArea {
 
 		else {
 
-			Text description = origin == Origin.EMPTY && layer.getMissingDescription() != null
+			Component description = origin == Origin.EMPTY && layer.getMissingDescription() != null
 				? layer.getMissingDescription()
 				: origin.getDescription();
 
-			for (var descriptionLine : textRenderer.wrapLines(description, this.getTextMaxWidth())) {
+			for (var descriptionLine : textRenderer.split(description, this.getTextMaxWidth())) {
 
-				context.drawTextWithShadow(textRenderer, descriptionLine, x, y, 0xCCCCCC);
+				context.text(textRenderer, descriptionLine, x, y, 0xCCCCCC);
 
 				y += LINE_HEIGHT;
 				lines++;
@@ -242,9 +253,9 @@ public class OriginWindowWidget extends AbstractScrollArea {
 
 			if (randomOrigins != null) {
 
-				for (var randomOriginLine : textRenderer.wrapLines(randomOrigins, this.getTextMaxWidth())) {
+				for (var randomOriginLine : textRenderer.split(randomOrigins, this.getTextMaxWidth())) {
 
-					context.drawTextWithShadow(textRenderer, randomOriginLine, x, y, 0xCCCCCC);
+					context.text(textRenderer, randomOriginLine, x, y, 0xCCCCCC);
 
 					y += LINE_HEIGHT;
 					lines++;
@@ -264,12 +275,12 @@ public class OriginWindowWidget extends AbstractScrollArea {
 					y += LINE_HEIGHT;
 					lines++;
 
-					List<OrderedText> nameLines = new ObjectArrayList<>(textRenderer.wrapLines(power.getName().formatted(Formatting.UNDERLINE), this.getTextMaxWidth()));
-					int nameWidth = textRenderer.getWidth(nameLines.getLast());
+					List<FormattedCharSequence> nameLines = new ObjectArrayList<>(textRenderer.split(power.getName().withStyle(ChatFormatting.UNDERLINE), this.getTextMaxWidth()));
+					int nameWidth = textRenderer.width(nameLines.getLast());
 
 					for (var nameLine : nameLines) {
 
-						context.drawTextWithShadow(textRenderer, nameLine, x, y, 0xFFFFFF);
+						context.text(textRenderer, nameLine, x, y, 0xFFFFFF);
 
 						y += LINE_HEIGHT;
 						lines++;
@@ -301,7 +312,7 @@ public class OriginWindowWidget extends AbstractScrollArea {
 						}
 
 						badgeWidget.setPosition(badgeX, badgeY);
-						badgeWidget.render(context, mouseX, mouseY, delta);
+						badgeWidget.extractWidgetRenderState(context, mouseX, mouseY, delta);
 
 						badgeOffsetX++;
 
@@ -316,9 +327,9 @@ public class OriginWindowWidget extends AbstractScrollArea {
 					y += badgeOffset * Badge.SIZE;
 					lines += badgeOffset;
 
-					for (var powerDescriptionLine : textRenderer.wrapLines(power.getDescription(), this.getTextMaxWidth())) {
+					for (var powerDescriptionLine : textRenderer.split(power.getDescription(), this.getTextMaxWidth())) {
 
-						context.drawTextWithShadow(textRenderer, powerDescriptionLine, x, y, 0xCCCCCC);
+						context.text(textRenderer, powerDescriptionLine, x, y, 0xCCCCCC);
 
 						y += LINE_HEIGHT;
 						lines++;
@@ -335,7 +346,7 @@ public class OriginWindowWidget extends AbstractScrollArea {
 
 	}
 
-	protected void renderNameAndImpact(GuiGraphics context, int mouseX, int mouseY, float delta) {
+	protected void renderNameAndImpact(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
 
 		if (origin == null) {
 			return;
@@ -346,7 +357,7 @@ public class OriginWindowWidget extends AbstractScrollArea {
 		int namePlateXStart = this.getCenterX() - (NAMEPLATE_WIDTH / 2);
 		int namePlateXEnd = namePlateXStart + NAMEPLATE_WIDTH;
 
-		context.drawGuiTexture(textures.namePlate(), namePlateXStart, y + 10, NAMEPLATE_WIDTH, NAMEPLATE_HEIGHT);
+		context.blitSprite(RenderPipelines.GUI_TEXTURED,textures.namePlate(), namePlateXStart, y + 10, NAMEPLATE_WIDTH, NAMEPLATE_HEIGHT);
 
 		ItemStack icon = origin.getDisplayItem();
 		ImpactWidget impactWidget = new ImpactWidget(origin.getImpact(), namePlateXEnd - 32, y + 19);
@@ -360,27 +371,12 @@ public class OriginWindowWidget extends AbstractScrollArea {
 			MiscUtilClient.drawScrollingText(context, textRenderer, origin.getName(), TextAlignment.CENTER, nameStartX, nameStartY, nameEndX, nameEndY, 0xFFFFFF, true);
 		}
 
-		impactWidget.render(context, mouseX, mouseY, delta);
-		context.drawItem(icon, namePlateXStart + 5, y + 15);
+		impactWidget.extractWidgetRenderState(context, mouseX, mouseY, delta);
+		context.item(icon, namePlateXStart + 5, y + 15);
 
 		if (impactWidget.isHovered()) {
 			this.tooltips.add(impactWidget);
 		}
-
-	}
-
-	@Override
-	protected int contentHeight() {
-		return 0;
-	}
-
-	@Override
-	protected void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-
-	}
-
-	@Override
-	protected void updateWidgetNarration(NarrationElementOutput output) {
 
 	}
 

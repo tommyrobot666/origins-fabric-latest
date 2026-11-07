@@ -1,11 +1,12 @@
 package io.github.apace100.origins.screen;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import io.github.apace100.origins.Origins;
 import io.github.apace100.origins.origin.Origin;
 import io.github.apace100.origins.origin.OriginLayer;
 import io.github.apace100.origins.screen.widget.OriginWindowWidget;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
@@ -29,36 +30,36 @@ public abstract class OriginDisplayScreen extends Screen {
 
         super.init();
 
-        this.windowWidget.init(this.textRenderer);
+        this.windowWidget.init(this.font);
         this.windowWidget.setPosition((this.width - windowWidget.getWidth()) / 2, (this.height - windowWidget.getHeight()) / 2);
 
-        this.addDrawableChild(windowWidget);
+        this.addRenderableWidget(windowWidget);
 
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(textRenderer, this.getTitle(), width / 2, windowWidget.getY() - 15, 0xFFFFFF);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        extractBackground(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
+        context.centeredText(font, this.getTitle(), width / 2, windowWidget.getY() - 15, 0xFFFFFF);
     }
 
     @Override
-    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void extractBackground(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
 
         if (showDirtBackground) {
-            RenderSystem.enableBlend();
-            context.drawTexture(DIRT_BACKGROUND, 0, 0, 0, 0.0F, 0.0F, this.width, this.height, 32, 32);
-            RenderSystem.disableBlend();
+//            RenderSystem.enableBlend();
+            context.blit(RenderPipelines.GUI_TEXTURED, DIRT_BACKGROUND, 0, 0, 0.0F, 0.0F, this.width, this.height, 32, 32);
+//            RenderSystem.disableBlend();
         }
 
         else {
-            super.renderBackground(context, mouseX, mouseY, delta);
+            super.extractBackground(context, mouseX, mouseY, delta);
         }
 
     }
 
-    @Override
-    public void renderInGameBackground(DrawContext context) {
+    public void renderInGameBackground(GuiGraphicsExtractor context) {
         context.fillGradient(0, 0, this.width, this.height, 1678774288, -2112876528);
     }
 

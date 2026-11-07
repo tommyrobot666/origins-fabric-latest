@@ -36,7 +36,7 @@ public class CraftingRecipeTooltipComponent implements ClientTooltipComponent {
     }
 
     @Override
-    public void drawItems(Font textRenderer, int x, int y, GuiGraphicsExtractor context) {
+    public void extractText(final GuiGraphicsExtractor context, final Font font, final int x, final int y) {
         this.drawBackground(context, x, y);
         for(int column = 0; column < 3; ++column) {
             for(int row = 0; row < 3; ++row) {
@@ -45,11 +45,11 @@ public class CraftingRecipeTooltipComponent implements ClientTooltipComponent {
                 int slotY = y + 8 + row * 18;
                 ItemStack stack = column >= recipeWidth ? ItemStack.EMPTY : inputs.get(index);
                 context.item(stack, slotX, slotY);
-                context.itemDecorations(textRenderer, stack, slotX, slotY);
+                context.itemDecorations(font, stack, slotX, slotY);
             }
         }
         context.item(output, x + 101, y + 25);
-        context.itemDecorations(textRenderer, output, x + 101, y + 25);
+        context.itemDecorations(font, output, x + 101, y + 25);
     }
 
     public void drawBackground(GuiGraphicsExtractor context, int x, int y) {
