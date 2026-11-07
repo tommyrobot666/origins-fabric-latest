@@ -1,17 +1,18 @@
 package io.github.apace100.origins.registry;
 
 import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.item.Items;
-import net.minecraft.loot.LootPool;
-import net.minecraft.loot.LootTable;
-import net.minecraft.loot.entry.EmptyEntry;
-import net.minecraft.loot.entry.ItemEntry;
-import net.minecraft.loot.function.SetEnchantmentsLootFunction;
-import net.minecraft.loot.provider.number.ConstantLootNumberProvider;
-import net.minecraft.registry.*;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.level.storage.loot.LootPool;
+import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.entries.EmptyLootItem;
+import net.minecraft.world.level.storage.loot.entries.LootItem;
+import net.minecraft.world.level.storage.loot.functions.SetEnchantmentsFunction;
+import net.minecraft.world.level.storage.loot.providers.number.ints.ContextIntProviders;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -19,20 +20,20 @@ import java.util.function.BiFunction;
 
 public class ModLoot {
 
-    private static final Set<RegistryKey<LootTable>> AFFECTED_TABLES = new HashSet<>();
+    private static final Set<ResourceKey<LootTable>> AFFECTED_TABLES = new HashSet<>();
 
-    private static final RegistryKey<LootTable> SIMPLE_DUNGEON = getAndAddTable("chests/simple_dungeon");
-    private static final RegistryKey<LootTable> STRONGHOLD_LIBRARY = getAndAddTable("chests/stronghold_library");
-    private static final RegistryKey<LootTable> MINESHAFT = getAndAddTable("chests/abandoned_mineshaft");
-    private static final RegistryKey<LootTable> SMALL_UNDERWATER_RUIN = getAndAddTable("chests/underwater_ruin_small");
+    private static final ResourceKey<LootTable> SIMPLE_DUNGEON = getAndAddTable("chests/simple_dungeon");
+    private static final ResourceKey<LootTable> STRONGHOLD_LIBRARY = getAndAddTable("chests/stronghold_library");
+    private static final ResourceKey<LootTable> MINESHAFT = getAndAddTable("chests/abandoned_mineshaft");
+    private static final ResourceKey<LootTable> SMALL_UNDERWATER_RUIN = getAndAddTable("chests/underwater_ruin_small");
 
-    private static final BiFunction<RegistryEntry<Enchantment>, Integer, SetEnchantmentsLootFunction.Builder> SIMPLE_ENCHANTMENT_SETTER = (enchantmentEntry, levels) ->
-        new SetEnchantmentsLootFunction.Builder()
-            .enchantment(enchantmentEntry, ConstantLootNumberProvider.create(levels));
+    private static final BiFunction<Holder<Enchantment>, Integer, SetEnchantmentsFunction.Builder> SIMPLE_ENCHANTMENT_SETTER = (enchantmentEntry, levels) ->
+        new SetEnchantmentsFunction.Builder()
+            .withEnchantment(enchantmentEntry, ContextIntProviders.exactly(levels));
 
-    private static RegistryKey<LootTable> getAndAddTable(String path) {
+    private static ResourceKey<LootTable> getAndAddTable(String path) {
 
-        RegistryKey<LootTable> tableKey = RegistryKey.of(RegistryKeys.LOOT_TABLE, Identifier.of(path));
+        ResourceKey<LootTable> tableKey = ResourceKey.create(Registries.LOOT_TABLE, Identifier.withDefaultNamespace(path));
         AFFECTED_TABLES.add(tableKey);
 
         return tableKey;
@@ -46,62 +47,62 @@ public class ModLoot {
                 return;
             }
 
-            RegistryEntry<Enchantment> waterProtection = registries
-                .getWrapperOrThrow(RegistryKeys.ENCHANTMENT)
-                .getOptional(ModEnchantments.WATER_PROTECTION).orElse(null);
+            Holder<Enchantment> waterProtection = registries
+                .lookupOrThrow(Registries.ENCHANTMENT)
+                .get(ModEnchantments.WATER_PROTECTION).orElse(null);
 
             if (waterProtection == null) return;
 
             if (key.equals(SIMPLE_DUNGEON)) {
                 tableBuilder.pool(new LootPool.Builder()
-                    .rolls(ConstantLootNumberProvider.create(1.0F))
-                    .with(ItemEntry.builder(Items.BOOK)
-                        .weight(20)
+                    .setRolls(ContextIntProviders.exactly(1))
+                        .add(LootItem.lootTableItem(Items.BOOK)
+                                .setWeight(20)
                         .apply(SIMPLE_ENCHANTMENT_SETTER.apply(waterProtection, 1)))
-                    .with(ItemEntry.builder(Items.BOOK)
-                        .weight(10)
+                    .add(LootItem.lootTableItem(Items.BOOK)
+                        .setWeight(10)
                         .apply(SIMPLE_ENCHANTMENT_SETTER.apply(waterProtection, 2)))
-                    .with(EmptyEntry.builder()
-                        .weight(80)));
+                    .add(EmptyLootItem.emptyItem()
+                        .setWeight(80)).build());
             }
 
             else if (key.equals(STRONGHOLD_LIBRARY)) {
                 tableBuilder.pool(new LootPool.Builder()
-                    .rolls(ConstantLootNumberProvider.create(1.0F))
-                    .with(ItemEntry.builder(Items.BOOK)
-                        .weight(20)
+                    .setRolls(ContextIntProviders.exactly(1))
+                    .add(LootItem.lootTableItem(Items.BOOK)
+                        .setWeight(20)
                         .apply(SIMPLE_ENCHANTMENT_SETTER.apply(waterProtection, 2)))
-                    .with(ItemEntry.builder(Items.BOOK)
-                        .weight(10)
+                    .add(LootItem.lootTableItem(Items.BOOK)
+                        .setWeight(10)
                         .apply(SIMPLE_ENCHANTMENT_SETTER.apply(waterProtection, 3)))
-                    .with(EmptyEntry.builder()
-                        .weight(80)));
+                    .add(EmptyLootItem.emptyItem()
+                        .setWeight(80)).build());
             }
 
             else if (key.equals(MINESHAFT)) {
                 tableBuilder.pool(new LootPool.Builder()
-                    .rolls(ConstantLootNumberProvider.create(1.0F))
-                    .with(ItemEntry.builder(Items.BOOK)
-                        .weight(20)
+                    .setRolls(ContextIntProviders.exactly(1))
+                    .add(LootItem.lootTableItem(Items.BOOK)
+                        .setWeight(20)
                         .apply(SIMPLE_ENCHANTMENT_SETTER.apply(waterProtection, 1)))
-                    .with(ItemEntry.builder(Items.BOOK)
-                        .weight(5)
+                    .add(LootItem.lootTableItem(Items.BOOK)
+                        .setWeight(5)
                         .apply(SIMPLE_ENCHANTMENT_SETTER.apply(waterProtection, 2)))
-                    .with(EmptyEntry.builder()
-                        .weight(90)));
+                    .add(EmptyLootItem.emptyItem()
+                        .setWeight(90)).build());
             }
 
             else if (key.equals(SMALL_UNDERWATER_RUIN)) {
                 tableBuilder.pool(new LootPool.Builder()
-                    .rolls(ConstantLootNumberProvider.create(1.0F))
-                    .with(ItemEntry.builder(Items.BOOK)
-                        .weight(10)
+                    .setRolls(ContextIntProviders.exactly(1))
+                    .add(LootItem.lootTableItem(Items.BOOK)
+                        .setWeight(10)
                         .apply(SIMPLE_ENCHANTMENT_SETTER.apply(waterProtection, 1)))
-                    .with(ItemEntry.builder(Items.BOOK)
-                        .weight(20)
+                    .add(LootItem.lootTableItem(Items.BOOK)
+                        .setWeight(20)
                         .apply(SIMPLE_ENCHANTMENT_SETTER.apply(waterProtection, 2)))
-                    .with(EmptyEntry.builder()
-                        .weight(110)));
+                    .add(EmptyLootItem.emptyItem()
+                        .setWeight(110)).build());
             }
 
         });

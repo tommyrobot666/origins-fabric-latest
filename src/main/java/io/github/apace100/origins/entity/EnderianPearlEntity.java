@@ -19,7 +19,7 @@ import org.jspecify.annotations.NonNull;
 
 public class EnderianPearlEntity extends ThrowableItemProjectile {
 
-   public EnderianPearlEntity(EntityType<? extends ThrowableItemProjectile> entityType, Level world) {
+   public EnderianPearlEntity(EntityType<EnderianPearlEntity> entityType, Level world) {
       super(entityType, world);
    }
 
